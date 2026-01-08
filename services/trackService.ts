@@ -1,5 +1,25 @@
 import { Track, MusicalKey, ITrackService, SetList } from '../types';
 
+// Helper: Genre Grouping Logic (Shared)
+export const getGenreCategory = (genre: string = ''): string => {
+    const g = (genre || '').toLowerCase();
+    if (!g) return 'Other';
+    
+    if (g.includes('house') || g.includes('minimal') || g.includes('acid') || g === 'progressive' || g.includes('disco')) return 'House / Disco';
+    if (g.includes('techno')) return 'Techno';
+    if (g.includes('trance') || g.includes('psytrance')) return 'Trance';
+    if (g.includes('hip hop') || g.includes('rap') || g.includes('trap') || g.includes('r&b') || g.includes('afrobeat') || g.includes('dancehall')) return 'Hip Hop / R&B';
+    if (g.includes('dnb') || g.includes('drum & bass') || g.includes('dubstep') || g.includes('bass') || g.includes('ukg') || g.includes('garage')) return 'Bass / DnB';
+    if (g.includes('latin') || g.includes('reggaeton') || g.includes('moombahton')) return 'Latin';
+    if (g.includes('rock') || g.includes('grunge') || g.includes('metal') || g.includes('punk') || g.includes('indie')) return 'Rock / Alt';
+    if (g.includes('jazz') || g.includes('lo-fi') || g.includes('ambient') || g.includes('lounge') || g.includes('trip hop') || g.includes('downtempo')) return 'Chill / Jazz';
+    if (g.includes('big room') || g.includes('hardstyle') || g.includes('hardcore') || g.includes('festival')) return 'Hard / Festival';
+    if (g.includes('pop') || g.includes('k-pop') || g.includes('dance')) return 'Pop / Dance';
+    if (g.includes('tool') || g.includes('fx') || g.includes('sample') || g.includes('loop') || g.includes('acapella')) return 'Tools';
+    
+    return 'Other';
+};
+
 // Mock Data - Expanded with diverse genres
 const MOCK_LIBRARY: Track[] = [
   // --- EXISTING TRACKS (Preserved) ---
@@ -176,6 +196,133 @@ const MOCK_LIBRARY: Track[] = [
   { id: '348', title: 'Cheap Thrills', artist: 'Sia', bpm: 90, key: '11A', energy: 7, resonance: 9, genre: 'Pop', duration: '03:31', coverUrl: 'https://picsum.photos/100/100?random=348' },
   { id: '349', title: 'Lean On', artist: 'Major Lazer', bpm: 98, key: '11B', energy: 7, resonance: 9, genre: 'Dance', duration: '02:56', coverUrl: 'https://picsum.photos/100/100?random=349' },
   { id: '350', title: 'Faded', artist: 'Alan Walker', bpm: 90, key: '11A', energy: 5, resonance: 10, genre: 'EDM', duration: '03:32', coverUrl: 'https://picsum.photos/100/100?random=350' },
+
+  // --- NEW BATCH 100 (ID 400+) ---
+  
+  // House / Tech House / Disco House (20 Tracks)
+  { id: '401', title: 'Rhyme Dust', artist: 'MK & Dom Dolla', bpm: 128, key: '1A', energy: 8, resonance: 9, genre: 'Tech House', duration: '03:12', coverUrl: 'https://picsum.photos/100/100?random=401' },
+  { id: '402', title: 'Miracle Maker', artist: 'Dom Dolla', bpm: 128, key: '9B', energy: 9, resonance: 8, genre: 'Tech House', duration: '03:00', coverUrl: 'https://picsum.photos/100/100?random=402' },
+  { id: '403', title: 'Baddest Of Them All', artist: 'LF SYSTEM', bpm: 124, key: '4A', energy: 7, resonance: 9, genre: 'Disco House', duration: '02:50', coverUrl: 'https://picsum.photos/100/100?random=403' },
+  { id: '404', title: 'Afraid To Feel', artist: 'LF SYSTEM', bpm: 128, key: '6A', energy: 7, resonance: 8, genre: 'Disco House', duration: '02:58', coverUrl: 'https://picsum.photos/100/100?random=404' },
+  { id: '405', title: 'Do It To It', artist: 'ACRAZE', bpm: 125, key: '11A', energy: 8, resonance: 9, genre: 'Tech House', duration: '02:37', coverUrl: 'https://picsum.photos/100/100?random=405' },
+  { id: '406', title: 'Ferrari', artist: 'James Hype', bpm: 125, key: '6A', energy: 7, resonance: 8, genre: 'Tech House', duration: '03:06', coverUrl: 'https://picsum.photos/100/100?random=406' },
+  { id: '407', title: 'Where You Are', artist: 'John Summit', bpm: 126, key: '6A', energy: 8, resonance: 9, genre: 'House', duration: '03:56', coverUrl: 'https://picsum.photos/100/100?random=407' },
+  { id: '408', title: 'Relax My Eyes', artist: 'ANOTR', bpm: 132, key: '3A', energy: 6, resonance: 8, genre: 'House', duration: '06:36', coverUrl: 'https://picsum.photos/100/100?random=408' },
+  { id: '409', title: 'Make Me', artist: 'Borai & Denham Audio', bpm: 134, key: '10A', energy: 8, resonance: 7, genre: 'House', duration: '02:37', coverUrl: 'https://picsum.photos/100/100?random=409' },
+  { id: '410', title: 'Escape', artist: 'Kx5 (deadmau5 & Kaskade)', bpm: 126, key: '11B', energy: 8, resonance: 8, genre: 'Progressive House', duration: '04:00', coverUrl: 'https://picsum.photos/100/100?random=410' },
+  { id: '411', title: 'Turn Back Time', artist: 'Diplo & Sonny Fodera', bpm: 124, key: '2A', energy: 7, resonance: 7, genre: 'House', duration: '02:59', coverUrl: 'https://picsum.photos/100/100?random=411' },
+  { id: '412', title: 'On My Mind', artist: 'Diplo & SIDEPIECE', bpm: 123, key: '7A', energy: 8, resonance: 8, genre: 'Tech House', duration: '03:09', coverUrl: 'https://picsum.photos/100/100?random=412' },
+  { id: '413', title: 'Goosebumps', artist: 'HVME', bpm: 125, key: '6A', energy: 7, resonance: 8, genre: 'Deep House', duration: '02:43', coverUrl: 'https://picsum.photos/100/100?random=413' },
+  { id: '414', title: 'The Motto', artist: 'Tiësto & Ava Max', bpm: 118, key: '7A', energy: 8, resonance: 9, genre: 'Dance Pop', duration: '02:44', coverUrl: 'https://picsum.photos/100/100?random=414' },
+  { id: '415', title: 'Moth To A Flame', artist: 'Swedish House Mafia', bpm: 120, key: '5A', energy: 7, resonance: 9, genre: 'House', duration: '03:54', coverUrl: 'https://picsum.photos/100/100?random=415' },
+  { id: '416', title: 'Don\'t You Worry Child', artist: 'Swedish House Mafia', bpm: 129, key: '11B', energy: 9, resonance: 10, genre: 'Progressive House', duration: '03:32', coverUrl: 'https://picsum.photos/100/100?random=416' },
+  { id: '417', title: 'Summer', artist: 'Calvin Harris', bpm: 128, key: '5A', energy: 9, resonance: 10, genre: 'Electro House', duration: '03:42', coverUrl: 'https://picsum.photos/100/100?random=417' },
+  { id: '418', title: 'This Is What You Came For', artist: 'Calvin Harris ft. Rihanna', bpm: 124, key: '9A', energy: 7, resonance: 10, genre: 'House', duration: '03:42', coverUrl: 'https://picsum.photos/100/100?random=418' },
+  { id: '419', title: 'Feel So Close', artist: 'Calvin Harris', bpm: 128, key: '7A', energy: 8, resonance: 10, genre: 'House', duration: '03:26', coverUrl: 'https://picsum.photos/100/100?random=419' },
+  { id: '420', title: 'Latch', artist: 'Disclosure ft. Sam Smith', bpm: 122, key: '11A', energy: 7, resonance: 9, genre: 'Deep House', duration: '04:16', coverUrl: 'https://picsum.photos/100/100?random=420' },
+
+  // Techno / Peak Time / Industrial (10 Tracks)
+  { id: '421', title: 'Metro', artist: 'Kevin de Vries & Mau P', bpm: 126, key: '5A', energy: 8, resonance: 7, genre: 'Melodic Techno', duration: '05:56', coverUrl: 'https://picsum.photos/100/100?random=421' },
+  { id: '422', title: 'Push Up', artist: 'Creeds', bpm: 160, key: '4A', energy: 10, resonance: 9, genre: 'Techno', duration: '04:00', coverUrl: 'https://picsum.photos/100/100?random=422' },
+  { id: '423', title: 'Fine Day Anthem', artist: 'Skrillex & Boys Noize', bpm: 138, key: '10A', energy: 9, resonance: 8, genre: 'Techno', duration: '03:20', coverUrl: 'https://picsum.photos/100/100?random=423' },
+  { id: '424', title: 'Rave', artist: 'Sam Paganini', bpm: 130, key: '2A', energy: 8, resonance: 7, genre: 'Techno', duration: '06:46', coverUrl: 'https://picsum.photos/100/100?random=424' },
+  { id: '425', title: 'I Want You', artist: 'Laidback Luke', bpm: 132, key: '4A', energy: 8, resonance: 6, genre: 'Techno', duration: '03:12', coverUrl: 'https://picsum.photos/100/100?random=425' },
+  { id: '426', title: 'Drugs From Amsterdam (Reinier Zonneveld Remix)', artist: 'Mau P', bpm: 140, key: '10A', energy: 10, resonance: 8, genre: 'Acid Techno', duration: '04:54', coverUrl: 'https://picsum.photos/100/100?random=426' },
+  { id: '427', title: 'Das Boot', artist: 'U96', bpm: 128, key: '4A', energy: 7, resonance: 8, genre: 'Techno', duration: '05:14', coverUrl: 'https://picsum.photos/100/100?random=427' },
+  { id: '428', title: 'Born Slippy', artist: 'Underworld', bpm: 140, key: '9A', energy: 8, resonance: 10, genre: 'Techno', duration: '11:37', coverUrl: 'https://picsum.photos/100/100?random=428' },
+  { id: '429', title: 'Insomnia', artist: 'Faithless', bpm: 127, key: '11A', energy: 7, resonance: 10, genre: 'Trance/Techno', duration: '08:43', coverUrl: 'https://picsum.photos/100/100?random=429' },
+  { id: '430', title: 'Satisfaction', artist: 'Benny Benassi', bpm: 130, key: '11A', energy: 8, resonance: 10, genre: 'Electro', duration: '04:46', coverUrl: 'https://picsum.photos/100/100?random=430' },
+
+  // Hip Hop / R&B / Trap (15 Tracks)
+  { id: '431', title: 'Paint The Town Red', artist: 'Doja Cat', bpm: 100, key: '8A', energy: 6, resonance: 9, genre: 'Hip Hop', duration: '03:51', coverUrl: 'https://picsum.photos/100/100?random=431' },
+  { id: '432', title: 'First Class', artist: 'Jack Harlow', bpm: 107, key: '4A', energy: 6, resonance: 9, genre: 'Hip Hop', duration: '02:53', coverUrl: 'https://picsum.photos/100/100?random=432' },
+  { id: '433', title: 'WAIT FOR U', artist: 'Future', bpm: 85, key: '1A', energy: 5, resonance: 8, genre: 'Trap', duration: '03:09', coverUrl: 'https://picsum.photos/100/100?random=433' },
+  { id: '434', title: 'Super Freaky Girl', artist: 'Nicki Minaj', bpm: 133, key: '2A', energy: 8, resonance: 9, genre: 'Hip Hop', duration: '02:50', coverUrl: 'https://picsum.photos/100/100?random=434' },
+  { id: '435', title: 'Rich Flex', artist: 'Drake & 21 Savage', bpm: 153, key: '11A', energy: 7, resonance: 9, genre: 'Hip Hop', duration: '03:59', coverUrl: 'https://picsum.photos/100/100?random=435' },
+  { id: '436', title: 'Mask Off', artist: 'Future', bpm: 150, key: '2A', energy: 6, resonance: 9, genre: 'Trap', duration: '03:24', coverUrl: 'https://picsum.photos/100/100?random=436' },
+  { id: '437', title: 'Bad and Boujee', artist: 'Migos', bpm: 127, key: '4A', energy: 7, resonance: 9, genre: 'Trap', duration: '05:43', coverUrl: 'https://picsum.photos/100/100?random=437' },
+  { id: '438', title: 'HUMBLE.', artist: 'Kendrick Lamar', bpm: 150, key: '1A', energy: 8, resonance: 9, genre: 'Hip Hop', duration: '02:57', coverUrl: 'https://picsum.photos/100/100?random=438' },
+  { id: '439', title: 'Rockstar', artist: 'Post Malone', bpm: 160, key: '4A', energy: 6, resonance: 10, genre: 'Hip Hop', duration: '03:38', coverUrl: 'https://picsum.photos/100/100?random=439' },
+  { id: '440', title: 'Sunflower', artist: 'Post Malone', bpm: 90, key: '2A', energy: 6, resonance: 10, genre: 'Pop Rap', duration: '02:37', coverUrl: 'https://picsum.photos/100/100?random=440' },
+  { id: '441', title: 'The Real Slim Shady', artist: 'Eminem', bpm: 104, key: '4A', energy: 8, resonance: 10, genre: 'Hip Hop', duration: '04:44', coverUrl: 'https://picsum.photos/100/100?random=441' },
+  { id: '442', title: 'Lose Yourself', artist: 'Eminem', bpm: 171, key: '2A', energy: 9, resonance: 10, genre: 'Hip Hop', duration: '05:26', coverUrl: 'https://picsum.photos/100/100?random=442' },
+  { id: '443', title: 'Still D.R.E.', artist: 'Dr. Dre', bpm: 93, key: '11A', energy: 7, resonance: 10, genre: 'Hip Hop', duration: '04:30', coverUrl: 'https://picsum.photos/100/100?random=443' },
+  { id: '444', title: 'Drop It Like It\'s Hot', artist: 'Snoop Dogg', bpm: 92, key: '1A', energy: 5, resonance: 9, genre: 'Hip Hop', duration: '04:26', coverUrl: 'https://picsum.photos/100/100?random=444' },
+  { id: '445', title: 'Hypnotize', artist: 'The Notorious B.I.G.', bpm: 94, key: '9A', energy: 6, resonance: 10, genre: 'Hip Hop', duration: '03:50', coverUrl: 'https://picsum.photos/100/100?random=445' },
+
+  // Pop / Top 40 (20 Tracks)
+  { id: '446', title: 'Flowers', artist: 'Miley Cyrus', bpm: 118, key: '12A', energy: 6, resonance: 10, genre: 'Pop', duration: '03:20', coverUrl: 'https://picsum.photos/100/100?random=446' },
+  { id: '447', title: 'Cruel Summer', artist: 'Taylor Swift', bpm: 170, key: '9A', energy: 8, resonance: 10, genre: 'Pop', duration: '02:58', coverUrl: 'https://picsum.photos/100/100?random=447' },
+  { id: '448', title: 'Anti-Hero', artist: 'Taylor Swift', bpm: 97, key: '4A', energy: 5, resonance: 9, genre: 'Pop', duration: '03:20', coverUrl: 'https://picsum.photos/100/100?random=448' },
+  { id: '449', title: 'As It Was', artist: 'Harry Styles', bpm: 174, key: '2A', energy: 7, resonance: 10, genre: 'Pop', duration: '02:47', coverUrl: 'https://picsum.photos/100/100?random=449' },
+  { id: '450', title: 'Unholy', artist: 'Sam Smith & Kim Petras', bpm: 131, key: '1A', energy: 7, resonance: 9, genre: 'Pop', duration: '02:36', coverUrl: 'https://picsum.photos/100/100?random=450' },
+  { id: '451', title: 'Vampire', artist: 'Olivia Rodrigo', bpm: 138, key: '5A', energy: 6, resonance: 9, genre: 'Pop Rock', duration: '03:39', coverUrl: 'https://picsum.photos/100/100?random=451' },
+  { id: '452', title: 'Good 4 U', artist: 'Olivia Rodrigo', bpm: 167, key: '9A', energy: 9, resonance: 9, genre: 'Pop Punk', duration: '02:58', coverUrl: 'https://picsum.photos/100/100?random=452' },
+  { id: '453', title: 'Dance The Night', artist: 'Dua Lipa', bpm: 110, key: '11A', energy: 7, resonance: 9, genre: 'Disco Pop', duration: '02:56', coverUrl: 'https://picsum.photos/100/100?random=453' },
+  { id: '454', title: 'Barbie World', artist: 'Nicki Minaj & Ice Spice', bpm: 144, key: '1A', energy: 8, resonance: 9, genre: 'Rap', duration: '01:49', coverUrl: 'https://picsum.photos/100/100?random=454' },
+  { id: '455', title: 'Greedy', artist: 'Tate McRae', bpm: 111, key: '1A', energy: 6, resonance: 9, genre: 'Pop', duration: '02:11', coverUrl: 'https://picsum.photos/100/100?random=455' },
+  { id: '456', title: 'Seven', artist: 'Jung Kook', bpm: 125, key: '11A', energy: 7, resonance: 10, genre: 'Pop/UKG', duration: '03:04', coverUrl: 'https://picsum.photos/100/100?random=456' },
+  { id: '457', title: 'Bad Habit', artist: 'Steve Lacy', bpm: 169, key: '1A', energy: 5, resonance: 8, genre: 'R&B', duration: '03:52', coverUrl: 'https://picsum.photos/100/100?random=457' },
+  { id: '458', title: 'Kill Bill', artist: 'SZA', bpm: 89, key: '8A', energy: 4, resonance: 9, genre: 'R&B', duration: '02:33', coverUrl: 'https://picsum.photos/100/100?random=458' },
+  { id: '459', title: 'Creepin\'', artist: 'Metro Boomin', bpm: 98, key: '6A', energy: 5, resonance: 9, genre: 'R&B', duration: '03:41', coverUrl: 'https://picsum.photos/100/100?random=459' },
+  { id: '460', title: 'Die For You', artist: 'The Weeknd', bpm: 67, key: '1A', energy: 5, resonance: 9, genre: 'R&B', duration: '04:20', coverUrl: 'https://picsum.photos/100/100?random=460' },
+  { id: '461', title: 'Starboy', artist: 'The Weeknd', bpm: 186, key: '10A', energy: 7, resonance: 10, genre: 'R&B', duration: '03:50', coverUrl: 'https://picsum.photos/100/100?random=461' },
+  { id: '462', title: 'Can\'t Stop The Feeling!', artist: 'Justin Timberlake', bpm: 113, key: '8A', energy: 8, resonance: 9, genre: 'Pop', duration: '03:56', coverUrl: 'https://picsum.photos/100/100?random=462' },
+  { id: '463', title: 'Happy', artist: 'Pharrell Williams', bpm: 160, key: '10A', energy: 9, resonance: 10, genre: 'Soul', duration: '03:53', coverUrl: 'https://picsum.photos/100/100?random=463' },
+  { id: '464', title: 'Shake It Off', artist: 'Taylor Swift', bpm: 160, key: '9A', energy: 9, resonance: 10, genre: 'Pop', duration: '03:39', coverUrl: 'https://picsum.photos/100/100?random=464' },
+  { id: '465', title: 'Roar', artist: 'Katy Perry', bpm: 90, key: '12A', energy: 7, resonance: 10, genre: 'Pop', duration: '03:43', coverUrl: 'https://picsum.photos/100/100?random=465' },
+
+  // Latin / Reggaeton (10 Tracks)
+  { id: '466', title: 'Ella Baila Sola', artist: 'Eslabon Armado', bpm: 148, key: '5A', energy: 6, resonance: 9, genre: 'Regional Mexican', duration: '02:45', coverUrl: 'https://picsum.photos/100/100?random=466' },
+  { id: '467', title: 'Un x100to', artist: 'Grupo Frontera', bpm: 83, key: '10A', energy: 5, resonance: 9, genre: 'Regional Mexican', duration: '03:14', coverUrl: 'https://picsum.photos/100/100?random=467' },
+  { id: '468', title: 'La Bachata', artist: 'Manuel Turizo', bpm: 125, key: '8A', energy: 6, resonance: 8, genre: 'Bachata', duration: '02:42', coverUrl: 'https://picsum.photos/100/100?random=468' },
+  { id: '469', title: 'Provenza', artist: 'Karol G', bpm: 111, key: '1A', energy: 6, resonance: 9, genre: 'Reggaeton', duration: '03:30', coverUrl: 'https://picsum.photos/100/100?random=469' },
+  { id: '470', title: 'Me Porto Bonito', artist: 'Bad Bunny', bpm: 92, key: '6A', energy: 7, resonance: 9, genre: 'Reggaeton', duration: '02:58', coverUrl: 'https://picsum.photos/100/100?random=470' },
+  { id: '471', title: 'Moscow Mule', artist: 'Bad Bunny', bpm: 100, key: '5A', energy: 6, resonance: 8, genre: 'Reggaeton', duration: '04:05', coverUrl: 'https://picsum.photos/100/100?random=471' },
+  { id: '472', title: 'Despechá', artist: 'Rosalía', bpm: 130, key: '5A', energy: 8, resonance: 9, genre: 'Mambo', duration: '02:37', coverUrl: 'https://picsum.photos/100/100?random=472' },
+  { id: '473', title: 'TQG', artist: 'Karol G & Shakira', bpm: 120, key: '8A', energy: 7, resonance: 9, genre: 'Reggaeton', duration: '03:18', coverUrl: 'https://picsum.photos/100/100?random=473' },
+  { id: '474', title: 'Besos Moja2', artist: 'Wisin & Yandel', bpm: 94, key: '4A', energy: 7, resonance: 8, genre: 'Reggaeton', duration: '03:49', coverUrl: 'https://picsum.photos/100/100?random=474' },
+  { id: '475', title: 'Mamiii', artist: 'Becky G & Karol G', bpm: 94, key: '7A', energy: 7, resonance: 9, genre: 'Reggaeton', duration: '03:47', coverUrl: 'https://picsum.photos/100/100?random=475' },
+
+  // DnB / Bass / Dubstep (10 Tracks)
+  { id: '476', title: 'Liquor & Cigarettes', artist: 'Chase & Status', bpm: 174, key: '8A', energy: 9, resonance: 8, genre: 'DnB', duration: '03:09', coverUrl: 'https://picsum.photos/100/100?random=476' },
+  { id: '477', title: 'Disconnect', artist: 'Becky Hill', bpm: 174, key: '6A', energy: 9, resonance: 8, genre: 'DnB', duration: '02:44', coverUrl: 'https://picsum.photos/100/100?random=477' },
+  { id: '478', title: 'Strangers', artist: 'Kenya Grace', bpm: 170, key: '10A', energy: 6, resonance: 9, genre: 'DnB', duration: '02:52', coverUrl: 'https://picsum.photos/100/100?random=478' },
+  { id: '479', title: 'Prada', artist: 'cassö', bpm: 142, key: '4A', energy: 8, resonance: 9, genre: 'Bass House', duration: '02:12', coverUrl: 'https://picsum.photos/100/100?random=479' },
+  { id: '480', title: 'Nanana', artist: 'Peggy Gou', bpm: 130, key: '9B', energy: 7, resonance: 10, genre: 'House', duration: '03:51', coverUrl: 'https://picsum.photos/100/100?random=480' }, // Dup but ok
+  { id: '481', title: 'Dashstar*', artist: 'Knock2', bpm: 126, key: '4A', energy: 10, resonance: 8, genre: 'Bass House', duration: '03:22', coverUrl: 'https://picsum.photos/100/100?random=481' },
+  { id: '482', title: 'Saddest Vanilla', artist: 'Riton', bpm: 125, key: '4A', energy: 8, resonance: 7, genre: 'House', duration: '03:02', coverUrl: 'https://picsum.photos/100/100?random=482' },
+  { id: '483', title: 'Selecta', artist: 'Skrillex', bpm: 136, key: '1A', energy: 8, resonance: 7, genre: 'Bass', duration: '03:00', coverUrl: 'https://picsum.photos/100/100?random=483' },
+  { id: '484', title: 'Baby again..', artist: 'Fred again..', bpm: 127, key: '10A', energy: 8, resonance: 8, genre: 'Tech House', duration: '05:20', coverUrl: 'https://picsum.photos/100/100?random=484' },
+  { id: '485', title: 'XENA', artist: 'Skrillex', bpm: 145, key: '5A', energy: 9, resonance: 7, genre: 'Bass', duration: '03:10', coverUrl: 'https://picsum.photos/100/100?random=485' },
+
+  // Rock / Indie / Alternative (5 Tracks)
+  { id: '486', title: 'Do I Wanna Know?', artist: 'Arctic Monkeys', bpm: 85, key: '10A', energy: 6, resonance: 9, genre: 'Indie Rock', duration: '04:32', coverUrl: 'https://picsum.photos/100/100?random=486' },
+  { id: '487', title: 'Pumped Up Kicks', artist: 'Foster The People', bpm: 128, key: '10A', energy: 7, resonance: 10, genre: 'Indie Pop', duration: '04:00', coverUrl: 'https://picsum.photos/100/100?random=487' },
+  { id: '488', title: 'Take Me Out', artist: 'Franz Ferdinand', bpm: 105, key: '9A', energy: 8, resonance: 9, genre: 'Indie Rock', duration: '03:57', coverUrl: 'https://picsum.photos/100/100?random=488' },
+  { id: '489', title: 'Fluorescent Adolescent', artist: 'Arctic Monkeys', bpm: 112, key: '9A', energy: 8, resonance: 8, genre: 'Indie Rock', duration: '02:57', coverUrl: 'https://picsum.photos/100/100?random=489' },
+  { id: '490', title: 'Naive', artist: 'The Kooks', bpm: 103, key: '8A', energy: 7, resonance: 8, genre: 'Indie Pop', duration: '03:23', coverUrl: 'https://picsum.photos/100/100?random=490' },
+
+  // Trance / Big Room (5 Tracks)
+  { id: '491', title: 'On A Good Day', artist: 'Above & Beyond', bpm: 134, key: '1B', energy: 8, resonance: 9, genre: 'Trance', duration: '05:56', coverUrl: 'https://picsum.photos/100/100?random=491' },
+  { id: '492', title: 'Sun & Moon', artist: 'Above & Beyond', bpm: 134, key: '4A', energy: 8, resonance: 9, genre: 'Trance', duration: '05:27', coverUrl: 'https://picsum.photos/100/100?random=492' },
+  { id: '493', title: 'Language', artist: 'Porter Robinson', bpm: 128, key: '9A', energy: 9, resonance: 9, genre: 'Electro House', duration: '06:08', coverUrl: 'https://picsum.photos/100/100?random=493' },
+  { id: '494', title: 'Calling (Lose My Mind)', artist: 'Sebastian Ingrosso', bpm: 126, key: '10B', energy: 9, resonance: 8, genre: 'Progressive House', duration: '06:15', coverUrl: 'https://picsum.photos/100/100?random=494' },
+  { id: '495', title: 'Reload', artist: 'Sebastian Ingrosso', bpm: 128, key: '1A', energy: 9, resonance: 9, genre: 'Progressive House', duration: '06:00', coverUrl: 'https://picsum.photos/100/100?random=495' },
+
+  // Classics / Throwbacks (5 Tracks)
+  { id: '496', title: 'Show Me Love', artist: 'Robin S', bpm: 120, key: '10A', energy: 7, resonance: 10, genre: 'House', duration: '04:29', coverUrl: 'https://picsum.photos/100/100?random=496' },
+  { id: '497', title: 'Gypsy Woman', artist: 'Crystal Waters', bpm: 120, key: '6A', energy: 6, resonance: 10, genre: 'House', duration: '03:45', coverUrl: 'https://picsum.photos/100/100?random=497' },
+  { id: '498', title: 'Rhythm Is A Dancer', artist: 'Snap!', bpm: 124, key: '10A', energy: 7, resonance: 10, genre: 'Eurodance', duration: '05:32', coverUrl: 'https://picsum.photos/100/100?random=498' },
+  { id: '499', title: 'Pump Up The Jam', artist: 'Technotronic', bpm: 125, key: '10A', energy: 8, resonance: 10, genre: 'House', duration: '05:22', coverUrl: 'https://picsum.photos/100/100?random=499' },
+  { id: '500', title: 'Blue (Da Ba Dee)', artist: 'Eiffel 65', bpm: 128, key: '6A', energy: 8, resonance: 10, genre: 'Eurodance', duration: '04:44', coverUrl: 'https://picsum.photos/100/100?random=500' },
+
+  // --- MOCK REMIXES FOR TESTING ---
+  { id: '1001', title: 'Midnight City (Eric Prydz Private Remix)', artist: 'M83', bpm: 126, key: '6A', energy: 9, resonance: 10, genre: 'Progressive House', duration: '06:01', coverUrl: 'https://picsum.photos/100/100?random=1001' },
+  { id: '1002', title: 'One More Time (Zedd Remix)', artist: 'Daft Punk', bpm: 128, key: '10A', energy: 9, resonance: 9, genre: 'Electro House', duration: '05:50', coverUrl: 'https://picsum.photos/100/100?random=1002' },
+  { id: '1003', title: 'Losing It (Odd Mob Remix)', artist: 'FISHER', bpm: 126, key: '2A', energy: 9, resonance: 9, genre: 'Tech House', duration: '05:12', coverUrl: 'https://picsum.photos/100/100?random=1003' },
+  { id: '1004', title: 'Flowers (Demo)', artist: 'Miley Cyrus', bpm: 115, key: '12A', energy: 5, resonance: 9, genre: 'Pop', duration: '03:10', coverUrl: 'https://picsum.photos/100/100?random=1004' },
+  { id: '1005', title: 'Blue (David Guetta & Bebe Rexha Remix)', artist: 'Eiffel 65', bpm: 128, key: '6A', energy: 9, resonance: 9, genre: 'Dance Pop', duration: '02:55', coverUrl: 'https://picsum.photos/100/100?random=1005' },
 ];
 
 /**

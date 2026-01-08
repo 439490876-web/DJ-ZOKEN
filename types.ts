@@ -53,5 +53,5 @@ export interface ITrackService {
 export interface AISuggestion {
   trackId: string;
   reasoning: string;
-  transitionScore: number;
+  score?: number;
 }

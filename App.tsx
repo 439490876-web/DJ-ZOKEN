@@ -1,38 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Track, SetList, TransitionAnalysis, SetType } from './types';
-import { trackService } from './services/trackService';
-import { analyzeTransitionAi } from './services/geminiService';
+import { Track, SetList, TransitionAnalysis, SetType, AISuggestion } from './types';
+import { trackService, getGenreCategory } from './services/trackService';
+import { analyzeTransitionAi, getAiSuggestions } from './services/geminiService';
+import { analyzeSet } from './services/analysisService';
+import { calculateTotalSetDuration } from './services/cueService';
 import EnergyChart from './components/EnergyChart';
-import SetBuilder from './components/SetBuilder';
-import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc } from 'lucide-react';
+import { SetBuilder } from './components/SetBuilder';
+import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye } from 'lucide-react';
 
 type SortKey = 'bpm' | 'key' | 'energy' | 'resonance';
 interface SortCriterion {
     key: SortKey;
     order: 'asc' | 'desc';
 }
-
-// ---------------------------
-// Genre Grouping Logic
-// ---------------------------
-const getGenreCategory = (genre: string = ''): string => {
-    const g = (genre || '').toLowerCase();
-    if (!g) return 'Other';
-    
-    if (g.includes('house') || g.includes('minimal') || g.includes('acid') || g === 'progressive' || g.includes('disco')) return 'House / Disco';
-    if (g.includes('techno')) return 'Techno';
-    if (g.includes('trance') || g.includes('psytrance')) return 'Trance';
-    if (g.includes('hip hop') || g.includes('rap') || g.includes('trap') || g.includes('r&b') || g.includes('afrobeat') || g.includes('dancehall')) return 'Hip Hop / R&B';
-    if (g.includes('dnb') || g.includes('drum & bass') || g.includes('dubstep') || g.includes('bass') || g.includes('ukg') || g.includes('garage')) return 'Bass / DnB';
-    if (g.includes('latin') || g.includes('reggaeton') || g.includes('moombahton')) return 'Latin';
-    if (g.includes('rock') || g.includes('grunge') || g.includes('metal') || g.includes('punk') || g.includes('indie')) return 'Rock / Alt';
-    if (g.includes('jazz') || g.includes('lo-fi') || g.includes('ambient') || g.includes('lounge') || g.includes('trip hop') || g.includes('downtempo')) return 'Chill / Jazz';
-    if (g.includes('big room') || g.includes('hardstyle') || g.includes('hardcore') || g.includes('festival')) return 'Hard / Festival';
-    if (g.includes('pop') || g.includes('k-pop') || g.includes('dance')) return 'Pop / Dance';
-    if (g.includes('tool') || g.includes('fx') || g.includes('sample') || g.includes('loop') || g.includes('acapella')) return 'Tools';
-    
-    return 'Other';
-};
 
 const App: React.FC = () => {
   const [library, setLibrary] = useState<Track[]>([]);
@@ -45,6 +25,13 @@ const App: React.FC = () => {
   // Sorting State
   const [sortMode, setSortMode] = useState<'single' | 'multi'>('single');
   const [sortCriteria, setSortCriteria] = useState<SortCriterion[]>([]);
+  
+  // Focus Mode State (Library Filter)
+  const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
+
+  // AI Suggestion State
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+  const [isAiSuggesting, setIsAiSuggesting] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -81,9 +68,42 @@ const App: React.FC = () => {
       });
   }, [library]);
 
+  // Statistics Calculation
+  const averageEnergy = useMemo(() => {
+      if (setTracks.length === 0) return '0.0';
+      const total = setTracks.reduce((sum, t) => sum + t.energy, 0);
+      return (total / setTracks.length).toFixed(1);
+  }, [setTracks]);
+
+  const estimatedTotalTime = useMemo(() => {
+      return calculateTotalSetDuration(setTracks, setType);
+  }, [setTracks, setType]);
+
+  const genreStats = useMemo(() => {
+      const total = setTracks.length;
+      if (total === 0) return [];
+      const counts: Record<string, number> = {};
+      setTracks.forEach(t => {
+          const cat = getGenreCategory(t.genre);
+          counts[cat] = (counts[cat] || 0) + 1;
+      });
+      return Object.entries(counts)
+          .map(([name, count]) => ({ name, count, percent: Math.round((count/total)*100) }))
+          .sort((a,b) => b.count - a.count);
+  }, [setTracks]);
+
+  // Global Issues Analysis
+  const globalIssues = useMemo(() => {
+      return analyzeSet(setTracks, setType, 'standard');
+  }, [setTracks, setType]);
+
+  const issueCount = globalIssues.filter(i => i.severity === 'critical' || i.severity === 'warning').length;
+
   const addToSet = (track: Track) => {
     const newTrack = { ...track, id: `${track.id}-${crypto.randomUUID()}` }; 
     setSetTracks([...setTracks, newTrack]);
+    // Optionally clear suggestions after adding one
+    setAiSuggestions(prev => prev.filter(s => s.trackId !== track.id));
   };
 
   const removeFromSet = (instanceId: string) => {
@@ -106,13 +126,28 @@ const App: React.FC = () => {
     return null;
   };
 
+  const handleAiSuggest = async () => {
+      if (setTracks.length === 0) return;
+      setIsAiSuggesting(true);
+      setAiSuggestions([]); // Clear previous
+      
+      try {
+          const suggestions = await getAiSuggestions(setTracks, library, setType);
+          setAiSuggestions(suggestions);
+      } catch (e) {
+          console.error("AI Suggest Error", e);
+      } finally {
+          setIsAiSuggesting(false);
+      }
+  };
+
   const saveSet = async () => {
     const setList: SetList = {
         id: crypto.randomUUID(),
         name: `Set ${new Date().toLocaleDateString()}`,
         tracks: setTracks,
         type: setType,
-        totalDuration: '00:00'
+        totalDuration: estimatedTotalTime // Save the SMART duration
     };
     await trackService.saveSetList(setList);
     alert(`Set (${setType} 模式) 已保存!`);
@@ -121,7 +156,6 @@ const App: React.FC = () => {
   const handleSort = (key: SortKey) => {
       setSortCriteria(prev => {
           const existingIndex = prev.findIndex(c => c.key === key);
-          
           if (sortMode === 'single') {
               if (existingIndex >= 0) {
                   return [{ key, order: prev[existingIndex].order === 'asc' ? 'desc' : 'asc' }];
@@ -156,19 +190,21 @@ const App: React.FC = () => {
           return newMode;
       });
   };
+  
+  const handleSetGenreClick = (genre: string) => {
+    if (!genre) {
+        setSelectedCategory(null);
+    } else {
+        const cat = getGenreCategory(genre);
+        setSelectedCategory(cat);
+    }
+  };
 
-  // ---------------------------
-  // Filter & Sort Execution
-  // ---------------------------
   const processedLibrary = useMemo(() => {
     let result = [...library];
-
-    // 1. Genre Category Filter
     if (selectedCategory) {
         result = result.filter(t => getGenreCategory(t.genre) === selectedCategory);
     }
-
-    // 2. Search Filter
     if (searchTerm) {
         const lowerTerm = searchTerm.toLowerCase();
         result = result.filter(t => 
@@ -176,8 +212,11 @@ const App: React.FC = () => {
             t.artist.toLowerCase().includes(lowerTerm)
         );
     }
-
-    // 3. Sort
+    if (isFocusMode) {
+        if (setType === 'warmup') result = result.filter(t => t.resonance <= 7);
+        else if (setType === 'prime') result = result.filter(t => t.resonance >= 6);
+        else if (setType === 'closing') result = result.filter(t => t.resonance >= 7);
+    }
     if (sortCriteria.length > 0) {
         const parseKey = (k: string) => {
              if (!k) return 0;
@@ -185,27 +224,30 @@ const App: React.FC = () => {
              if (!match) return 0;
              return parseInt(match[1]) * 10 + (match[2] === 'A' ? 0 : 5);
         };
-
         result.sort((a, b) => {
             for (const criterion of sortCriteria) {
                 let valA: any = a[criterion.key];
                 let valB: any = b[criterion.key];
-
                 if (criterion.key === 'key') {
                     valA = parseKey(String(a.key));
                     valB = parseKey(String(b.key));
                 }
-
                 if (valA < valB) return criterion.order === 'asc' ? -1 : 1;
                 if (valA > valB) return criterion.order === 'asc' ? 1 : -1;
             }
             return 0;
         });
     }
-
     return result;
-  }, [library, searchTerm, sortCriteria, selectedCategory]);
+  }, [library, searchTerm, sortCriteria, selectedCategory, isFocusMode, setType]);
 
+  const focusModeDescription = useMemo(() => {
+      if (!isFocusMode) return "开启专注模式以过滤不适合当前时段的歌曲";
+      if (setType === 'warmup') return "暖场模式: 已隐藏高共鸣金曲 (>7)";
+      if (setType === 'prime') return "黄金模式: 已隐藏低共鸣铺垫曲 (<6)";
+      if (setType === 'closing') return "收尾模式: 已隐藏非经典曲目 (<7)";
+      return "";
+  }, [isFocusMode, setType]);
 
   if (isLoading) {
       return <div className="h-screen w-full flex items-center justify-center bg-dj-dark text-dj-accent animate-pulse">正在初始化 SpinFlow...</div>
@@ -232,6 +274,31 @@ const App: React.FC = () => {
               className="w-full bg-slate-800 border border-slate-700 text-sm rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-dj-accent focus:ring-1 focus:ring-dj-accent transition-all text-white placeholder-slate-500"
             />
           </div>
+
+          {/* FOCUS MODE TOGGLE */}
+          <button
+            onClick={() => setIsFocusMode(!isFocusMode)}
+            className={`w-full py-2 px-3 rounded-lg flex items-center justify-between text-xs font-bold transition-all border ${
+                isFocusMode 
+                ? 'bg-dj-accent/10 border-dj-accent text-dj-accent shadow-[0_0_10px_rgba(6,182,212,0.1)]' 
+                : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
+          >
+             <div className="flex items-center gap-2">
+                 <Target className="w-4 h-4" />
+                 <span>专注选曲 (Smart Focus)</span>
+             </div>
+             {isFocusMode && (
+                 <span className="bg-dj-accent text-slate-900 px-1.5 py-0.5 rounded text-[10px]">ON</span>
+             )}
+          </button>
+          
+          {isFocusMode && (
+              <div className="bg-slate-800/50 border border-slate-700 rounded px-2 py-1.5 flex items-center gap-2 text-[10px] text-slate-400 animate-in fade-in slide-in-from-top-1">
+                  <Filter className="w-3 h-3 text-slate-500" />
+                  {focusModeDescription}
+              </div>
+          )}
 
           {/* Genre Category Filter Bar */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
@@ -340,8 +407,10 @@ const App: React.FC = () => {
             </div>
             
             {processedLibrary.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-sm">
-                    未找到匹配歌曲
+                <div className="p-8 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
+                    <Filter className="w-8 h-8 opacity-20" />
+                    <p>未找到匹配歌曲</p>
+                    {isFocusMode && <p className="text-xs text-slate-600">专注模式已过滤部分歌曲</p>}
                 </div>
             )}
 
@@ -364,7 +433,6 @@ const App: React.FC = () => {
                                 
                                 {/* Metrics Row */}
                                 <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                    {/* Specific Genre Badge (Clicking it selects the PARENT category) */}
                                     <span 
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -410,7 +478,6 @@ const App: React.FC = () => {
 
       {/* MIDDLE: Set Builder */}
       <div className="flex-1 flex flex-col bg-gradient-to-br from-dj-dark to-[#131c31] relative">
-        {/* Context Selector Bar */}
         <div className="px-6 pt-4 pb-0 flex items-center justify-between">
             <div className="flex bg-slate-900/80 p-1 rounded-lg border border-slate-700/50">
                 <button
@@ -459,45 +526,197 @@ const App: React.FC = () => {
                 onReorderTracks={reorderTracks}
                 onAnalyzeTransition={handleTransitionAnalysis}
                 setType={setType}
+                onGenreClick={handleSetGenreClick}
+                highlightedCategory={selectedCategory}
             />
         </div>
-      </div>
-
-      {/* RIGHT: Analysis Panel */}
-      <div className="w-80 border-l border-slate-800 bg-slate-900/30 p-4 flex flex-col gap-6">
-        <div>
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Set 数据分析</h3>
-            <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="bg-dj-panel p-3 rounded-lg border border-slate-700">
-                    <div className="text-slate-500 text-xs">总时长</div>
-                    <div className="text-xl font-mono text-white">
-                        {Math.floor(setTracks.reduce((acc, t) => acc + (t.duration ? parseInt(t.duration.split(':')[0]) * 60 + parseInt(t.duration.split(':')[1]) : 0), 0) / 60)}m
-                    </div>
-                </div>
-                <div className="bg-dj-panel p-3 rounded-lg border border-slate-700">
-                    <div className="text-slate-500 text-xs">歌曲数量</div>
-                    <div className="text-xl font-mono text-white">{setTracks.length}</div>
-                </div>
-            </div>
-            
-            <EnergyChart tracks={setTracks} />
-        </div>
-
-        <div className="mt-auto space-y-3">
-            <button 
+        
+        {/* Set Action Footer in Middle Column */}
+        <div className="p-4 border-t border-slate-800/50 bg-slate-900/50 flex gap-3">
+             <button 
                 onClick={() => setSetTracks([])}
-                className="w-full py-2 px-4 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center gap-2 text-sm transition-colors"
+                className="flex-1 py-3 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center gap-2 text-sm transition-colors"
             >
                 <RotateCcw className="w-4 h-4" /> 重置
             </button>
             <button 
                 onClick={saveSet}
                 disabled={setTracks.length === 0}
-                className="w-full py-3 px-4 rounded-lg bg-dj-success hover:bg-emerald-400 text-slate-900 font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3 rounded-lg bg-dj-success hover:bg-emerald-400 text-slate-900 font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 <Save className="w-4 h-4" /> 保存 Setlist
             </button>
         </div>
+      </div>
+
+      {/* RIGHT: Analysis & AI Panel (Vertical Split - WIDENED to 600px) */}
+      <div className="w-[600px] border-l border-slate-800 bg-slate-900/30 flex flex-col">
+        
+        {/* TOP HALF: ANALYSIS & DATA */}
+        <div className="flex flex-col border-b border-slate-800 shadow-xl z-10 max-h-[55%] min-h-[40%] resize-y overflow-hidden relative">
+             <div className="bg-slate-900/80 px-4 py-3 flex items-center gap-2 border-b border-slate-800/50 backdrop-blur-sm sticky top-0 z-20">
+                 <BarChart3 className="w-4 h-4 text-dj-accent" />
+                 <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">实时诊断 & 数据</h3>
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-slate-900/20">
+                {/* DIAGNOSTICS MODULE */}
+                <div className="bg-slate-900/80 rounded-lg border border-slate-700/50 p-3">
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                        <span>诊断报告</span>
+                        {issueCount === 0 ? (
+                            <span className="text-emerald-500 flex items-center gap-1 text-[9px] bg-emerald-900/20 px-1.5 py-0.5 rounded-full border border-emerald-500/20">
+                                <CheckCircle2 className="w-2.5 h-2.5" /> 健康
+                            </span>
+                        ) : (
+                            <span className="text-amber-500 flex items-center gap-1 text-[9px] bg-amber-900/20 px-1.5 py-0.5 rounded-full border border-amber-500/20 animate-pulse">
+                                <AlertTriangle className="w-2.5 h-2.5" /> {issueCount} 异常
+                            </span>
+                        )}
+                    </h3>
+                    
+                    {issueCount === 0 && (
+                        <div className="text-[10px] text-slate-600 italic text-center py-1">
+                            Set 编排流畅
+                        </div>
+                    )}
+
+                    <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar pr-1">
+                        {globalIssues
+                            .filter(i => i.severity === 'critical' || i.severity === 'warning')
+                            .map((issue, idx) => {
+                                const trackIndex = parseInt(issue.id.split('-').pop() || '0') + 1;
+                                return (
+                                    <div key={idx} className={`text-[10px] p-1.5 rounded border flex items-start gap-2 ${
+                                        issue.severity === 'critical' 
+                                        ? 'bg-red-900/20 border-red-500/30 text-red-300' 
+                                        : 'bg-amber-900/20 border-amber-500/30 text-amber-300'
+                                    }`}>
+                                        <span className="font-mono font-bold opacity-70 mt-px">#{trackIndex}</span>
+                                        <div className="flex-1 leading-tight">
+                                            {issue.message}
+                                        </div>
+                                    </div>
+                                );
+                        })}
+                    </div>
+                </div>
+
+                {/* Compact Stats */}
+                <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-dj-panel p-2 rounded border border-slate-700">
+                        <div className="text-slate-500 text-[9px]">预计总时长</div>
+                        <div className="text-sm font-mono text-white text-emerald-400">
+                            {estimatedTotalTime}
+                        </div>
+                    </div>
+                    <div className="bg-dj-panel p-2 rounded border border-slate-700">
+                        <div className="text-slate-500 text-[9px]">歌曲数</div>
+                        <div className="text-sm font-mono text-white">{setTracks.length}</div>
+                    </div>
+                    <div className="bg-dj-panel p-2 rounded border border-slate-700">
+                        <div className="text-slate-500 text-[9px]">平均能量</div>
+                        <div className="text-sm font-mono text-white flex items-center gap-1">
+                            <Zap className="w-3 h-3 text-yellow-500" />
+                            {averageEnergy}
+                        </div>
+                    </div>
+                    <div className="bg-dj-panel p-2 rounded border border-slate-700 overflow-hidden">
+                        <div className="text-slate-500 text-[9px]">主导风格</div>
+                        <div className="text-xs font-medium text-white truncate">
+                            {genreStats.length > 0 ? genreStats[0].name.split('/')[0] : '-'}
+                        </div>
+                    </div>
+                </div>
+                
+                <EnergyChart tracks={setTracks} />
+             </div>
+        </div>
+
+        {/* BOTTOM HALF: AI SUGGESTIONS */}
+        <div className="flex-1 flex flex-col min-h-0 bg-slate-950/30">
+             <div className="bg-slate-900/90 px-4 py-3 flex items-center justify-between border-b border-slate-800/50 backdrop-blur-sm shrink-0">
+                 <div className="flex items-center gap-2">
+                     <Sparkles className="w-4 h-4 text-indigo-400" />
+                     <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider">AI 选曲助手</h3>
+                 </div>
+                 {isAiSuggesting && <Loader2 className="w-3 h-3 animate-spin text-indigo-500"/>}
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar relative">
+                 <div className="mb-3">
+                    <button 
+                        onClick={handleAiSuggest} 
+                        disabled={isAiSuggesting}
+                        className="w-full py-2.5 px-4 rounded bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600/40 hover:text-white hover:border-indigo-400 transition-all text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                    >
+                       {isAiSuggesting ? <Loader2 className="w-3 h-3 animate-spin"/> : <ScanEye className="w-3 h-3" />}
+                       {isAiSuggesting ? '正在分析...' : '寻找下一首最佳衔接'}
+                    </button>
+                    {setTracks.length === 0 && (
+                        <p className="text-[10px] text-slate-600 text-center mt-2">添加歌曲后，AI 将基于最后一首进行推荐</p>
+                    )}
+                 </div>
+
+                 <div className="space-y-2 pb-2">
+                    {aiSuggestions.map((s, idx) => {
+                       const track = library.find(t => t.id === s.trackId);
+                       if (!track) return null;
+                       
+                       return (
+                           <div key={`${s.trackId}-${idx}`} className="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded hover:border-indigo-500/50 transition-all group relative animate-in fade-in slide-in-from-bottom-2 duration-300">
+                               
+                               <div className="flex gap-2.5">
+                                    <img src={track.coverUrl || ''} className="w-12 h-12 rounded object-cover shadow-sm bg-slate-900 shrink-0" />
+                                    <div className="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="font-bold text-xs text-slate-200 truncate pr-1">{track.title}</h4>
+                                            {s.score && <span className="text-[9px] font-bold text-green-400 bg-green-950/40 px-1 rounded">{s.score}%</span>}
+                                        </div>
+                                        <p className="text-[10px] text-slate-400 truncate">{track.artist}</p>
+                                        
+                                        {/* Updated Metrics Badges with Resonance */}
+                                        <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                                            <span className="text-[9px] text-slate-500 font-mono flex items-center gap-0.5 bg-slate-900/50 px-1 rounded">
+                                                <Activity className="w-2.5 h-2.5" /> {track.bpm}
+                                            </span>
+                                            <span className="text-[9px] text-slate-500 font-mono flex items-center gap-0.5 bg-slate-900/50 px-1 rounded">
+                                                <Music className="w-2.5 h-2.5" /> {track.key}
+                                            </span>
+                                            <span className="text-[9px] text-yellow-500/80 font-mono flex items-center gap-0.5 bg-yellow-900/10 px-1 rounded">
+                                                <Zap className="w-2.5 h-2.5" /> {track.energy}
+                                            </span>
+                                            <span className="text-[9px] text-orange-500/80 font-mono flex items-center gap-0.5 bg-orange-900/10 px-1 rounded" title="共鸣度">
+                                                <Flame className="w-2.5 h-2.5" /> {track.resonance}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => addToSet(track)}
+                                        className="self-center p-1.5 bg-slate-700 hover:bg-indigo-600 text-slate-300 hover:text-white rounded shadow-sm transition-colors"
+                                    >
+                                       <Plus className="w-3.5 h-3.5" />
+                                   </button>
+                               </div>
+
+                               <div className="mt-2 text-[10px] text-indigo-300 bg-indigo-900/20 p-1.5 rounded border border-indigo-500/10 leading-snug flex gap-1.5 items-start">
+                                    <Bot className="w-3 h-3 mt-0.5 text-indigo-400 shrink-0" />
+                                    <span className="opacity-90">{s.reasoning}</span>
+                               </div>
+                           </div>
+                       );
+                    })}
+                    
+                    {aiSuggestions.length === 0 && !isAiSuggesting && setTracks.length > 0 && (
+                        <div className="text-center py-6 opacity-30">
+                            <Sparkles className="w-8 h-8 mx-auto mb-1" />
+                            <p className="text-[10px]">点击上方按钮获取 AI 推荐</p>
+                        </div>
+                    )}
+                 </div>
+            </div>
+        </div>
+
       </div>
 
     </div>

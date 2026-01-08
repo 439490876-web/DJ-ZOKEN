@@ -1,6 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { Track, TransitionAnalysis, SetType } from '../types';
-import { X, Disc, Activity, Music2, GripVertical, AlertTriangle, Scissors, AudioLines, SlidersHorizontal, Sparkles, Loader2, Zap, Flame, Snowflake, Waves, Minus, TrendingUp, TrendingDown, Tag } from 'lucide-react';
+import { getGenreCategory } from '../services/trackService';
+import { analyzeTrackIssues, StrictnessLevel, calculateHarmonicStatus, parseKey } from '../services/analysisService';
+import { calculateCueStrategy, calculateTotalSetDuration } from '../services/cueService';
+import { X, Disc, Activity, Music2, GripVertical, AlertTriangle, Scissors, AudioLines, SlidersHorizontal, Sparkles, Loader2, Zap, Flame, Waves, Minus, TrendingUp, TrendingDown, Tag, Layers, Link, ArrowRightLeft, CheckCircle2, AlertOctagon, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Target, Timer, Hourglass, Rabbit, Turtle } from 'lucide-react';
 
 interface SetBuilderProps {
   setTracks: Track[];
@@ -8,182 +11,61 @@ interface SetBuilderProps {
   onReorderTracks: (startIndex: number, endIndex: number) => void;
   onAnalyzeTransition: (trackAId: string, trackBId: string) => Promise<TransitionAnalysis | null>;
   setType: SetType;
+  onGenreClick: (genre: string) => void;
+  highlightedCategory: string | null;
 }
 
-type StrictnessLevel = 'strict' | 'standard' | 'loose';
-type Severity = 'critical' | 'warning' | 'info' | 'success';
-
-interface SetIssue {
-    severity: Severity;
-    message: string;
-    icon: React.ReactNode;
-}
-
-// Helper to parse Camelot keys (e.g. "11B", "2A")
-const parseKey = (key: string) => {
-    const match = key.match(/^(\d+)([AB])$/);
-    if (!match) return null;
-    return { num: parseInt(match[1], 10), letter: match[2] };
-};
-
-// Dynamic compatibility checker based on strictness level
-const calculateHarmonicStatus = (keyA: string, keyB: string, strictness: StrictnessLevel): 'exact' | 'compatible' | 'clash' => {
-    if (keyA === keyB) return 'exact';
-    
-    const k1 = parseKey(keyA);
-    const k2 = parseKey(keyB);
-    
-    if (!k1 || !k2) return 'clash'; // Fallback for invalid keys
-
-    const numDiff = Math.abs(k1.num - k2.num);
-    // Calculate shortest distance on the clock (e.g., 12 -> 1 is distance 1)
-    const circleDiff = Math.min(numDiff, 12 - numDiff);
-
-    // 0 Distance: Same Number (e.g., 8A -> 8A or 8A -> 8B)
-    if (circleDiff === 0) {
-        if (k1.letter === k2.letter) return 'exact';
-        return 'compatible';
+// Map Issue Types to Icons
+const getIssueIcon = (type: string) => {
+    switch (type) {
+        case 'harmonic': return <AlertOctagon className="w-3 h-3" />;
+        case 'bpm': return <AlertTriangle className="w-3 h-3" />;
+        case 'energy': return <Zap className="w-3 h-3" />;
+        case 'flow': return <Activity className="w-3 h-3" />;
+        case 'genre': return <Layers className="w-3 h-3" />;
+        case 'meta': return <Target className="w-3 h-3" />;
+        default: return <AlertTriangle className="w-3 h-3" />;
     }
-
-    // 1 Distance: +/- 1 Step (e.g., 8A -> 9A)
-    if (circleDiff === 1) {
-        if (strictness === 'strict') return 'clash';
-        if (k1.letter === k2.letter) return 'compatible';
-        if (strictness === 'loose') return 'compatible';
-    }
-
-    // 2 Distance: +/- 2 Steps (Energy Boost)
-    if (circleDiff === 2) {
-        if (strictness === 'loose') return 'compatible';
-    }
-
-    return 'clash';
-};
-
-// Advanced Context Analysis
-const getContextIssues = (track: Track, index: number, allTracks: Track[], setType: SetType): SetIssue[] => {
-    const issues: SetIssue[] = [];
-    const prevTrack = index > 0 ? allTracks[index - 1] : null;
-
-    // --- 1. Dynamic Energy Flow Checks ---
-    if (prevTrack) {
-        const energyDiff = track.energy - prevTrack.energy;
-        
-        // Sudden Jumps (>3 is significant on 1-10 scale)
-        if (energyDiff >= 4) {
-             issues.push({ 
-                severity: 'warning', 
-                message: `能量突增 (+${energyDiff})`, 
-                icon: <TrendingUp className="w-3 h-3" /> 
-            });
-        } else if (energyDiff <= -4) {
-             issues.push({ 
-                severity: 'info', 
-                message: `能量骤降 (${energyDiff})`, 
-                icon: <TrendingDown className="w-3 h-3" /> 
-            });
-        }
-    }
-
-    // Rollercoaster Check (V-Shape or A-Shape)
-    if (index >= 2) {
-        const prev1 = allTracks[index - 1];
-        const prev2 = allTracks[index - 2];
-        const diff1 = track.energy - prev1.energy;
-        const diff2 = prev1.energy - prev2.energy;
-
-        // If direction flips AND magnitude is significant
-        if ((diff1 > 0) !== (diff2 > 0) && Math.abs(diff1) >= 3 && Math.abs(diff2) >= 3) {
-            issues.push({ 
-                severity: 'critical', 
-                message: '能量过山车 (不稳定)', 
-                icon: <Activity className="w-3 h-3" /> 
-            });
-        }
-    }
-
-    // Flatness Check (Last 4 tracks)
-    if (index >= 3) {
-        const window = [track, allTracks[index-1], allTracks[index-2], allTracks[index-3]];
-        const energies = window.map(t => t.energy);
-        const max = Math.max(...energies);
-        const min = Math.min(...energies);
-        
-        if (max - min <= 1) {
-             issues.push({ 
-                severity: 'info', 
-                message: '能量缺乏起伏 (太平)', 
-                icon: <Minus className="w-3 h-3" /> 
-            });
-        }
-    }
-
-    // --- 2. Set Type Strategy Checks ---
-    if (setType === 'warmup') {
-        if (track.energy >= 8 || track.resonance >= 9) {
-            issues.push({ 
-                severity: 'warning', 
-                message: '暖场能量过高', 
-                icon: <Flame className="w-3 h-3" /> 
-            });
-        }
-    } else if (setType === 'prime') {
-        // Fatigue: 3 High Resonance tracks in a row
-        if (index >= 2) {
-            const prev1 = allTracks[index - 1];
-            const prev2 = allTracks[index - 2];
-            if (track.resonance >= 9 && prev1.resonance >= 9 && prev2.resonance >= 9) {
-                issues.push({ 
-                    severity: 'warning', 
-                    message: '听觉疲劳预警', 
-                    icon: <Waves className="w-3 h-3" /> 
-                });
-            }
-        }
-        
-        // Breather: Low energy after High energy
-        if (track.energy <= 6 && prevTrack && prevTrack.energy >= 9) {
-            issues.push({
-                severity: 'success',
-                message: '呼吸位 (Drop)',
-                icon: <Snowflake className="w-3 h-3" />
-            });
-        }
-    } else if (setType === 'closing') {
-        if (track.energy >= 9) {
-             issues.push({ severity: 'info', message: '收尾能量偏高', icon: <Zap className="w-3 h-3" /> });
-        }
-    }
-
-    return issues;
 };
 
 // Styling Helpers
-const getSeverityBadgeStyles = (s: Severity) => {
+const getSeverityBadgeStyles = (s: string) => {
     switch(s) {
         case 'critical': return 'bg-red-500/20 text-red-300 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]';
         case 'warning': return 'bg-amber-500/20 text-amber-300 border-amber-500/50';
         case 'info': return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
         case 'success': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
+        default: return 'bg-slate-700 text-slate-300';
     }
 };
 
-const getCardBackgroundTint = (issues: SetIssue[]) => {
+const getCardBackgroundTint = (issues: any[]) => {
     if (issues.some(i => i.severity === 'critical')) return 'bg-red-900/10 border-l-red-500';
     if (issues.some(i => i.severity === 'warning')) return 'bg-amber-900/10 border-l-amber-500';
-    if (issues.some(i => i.severity === 'success')) return 'bg-emerald-900/10'; // Keep original border logic for flow, just tint bg
+    if (issues.some(i => i.severity === 'success')) return 'bg-emerald-900/10'; 
     if (issues.some(i => i.severity === 'info')) return 'bg-blue-900/10';
     return '';
 };
 
-const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReorderTracks, onAnalyzeTransition, setType }) => {
+// Helper for Strategy Icon
+const getStrategyIcon = (type: string) => {
+    switch(type) {
+        case 'quick': return <Rabbit className="w-3 h-3" />;
+        case 'extended': return <Waves className="w-3 h-3" />;
+        case 'full': return <Hourglass className="w-3 h-3" />;
+        default: return <Timer className="w-3 h-3" />;
+    }
+};
+
+export const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReorderTracks, onAnalyzeTransition, setType, onGenreClick, highlightedCategory }) => {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const [strictness, setStrictness] = useState<StrictnessLevel>('standard');
   const [cutModes, setCutModes] = useState<Record<string, boolean>>({});
   const [analysisResults, setAnalysisResults] = useState<Record<string, TransitionAnalysis>>({});
   const [analyzingTransitions, setAnalyzingTransitions] = useState<Record<string, boolean>>({});
-  const [highlightedGenre, setHighlightedGenre] = useState<string | null>(null);
+
+  const estimatedTotalTime = calculateTotalSetDuration(setTracks, setType);
 
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
@@ -229,35 +111,43 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
             <Disc className="w-6 h-6 text-dj-accent" />
             当前编排
             </h2>
-            <p className="text-slate-400 text-sm">
-            {setTracks.length} 首歌曲 • 约 {setTracks.reduce((acc, t) => acc + parseInt(t.duration.split(':')[0]), 0)} 分钟
-            </p>
+            <div className="text-slate-400 text-sm flex items-center gap-3 mt-1">
+                <span>{setTracks.length} 首歌曲</span>
+                <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                <span className="flex items-center gap-1 text-emerald-400 font-mono">
+                    <Timer className="w-3.5 h-3.5" />
+                    预计 {estimatedTotalTime}
+                </span>
+            </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-700/50">
-            <div className="px-2 text-xs text-slate-500 font-bold flex items-center gap-1">
-                <SlidersHorizontal className="w-3 h-3" />
-                调性:
-            </div>
-            <div className="flex bg-slate-800 rounded-md p-0.5">
-                {(['strict', 'standard', 'loose'] as const).map(level => (
-                    <button
-                        key={level}
-                        onClick={() => setStrictness(level)}
-                        className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                            strictness === level 
-                            ? 'bg-dj-panel text-white shadow-sm ring-1 ring-white/10' 
-                            : 'text-slate-500 hover:text-slate-300'
-                        }`}
-                    >
-                        {level === 'strict' ? '严谨' : level === 'standard' ? '标准' : '宽松'}
-                    </button>
-                ))}
+        <div className="flex items-center gap-2">
+            {/* Strictness Control */}
+            <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-700/50">
+                <div className="px-2 text-xs text-slate-500 font-bold flex items-center gap-1">
+                    <SlidersHorizontal className="w-3 h-3" />
+                    调性:
+                </div>
+                <div className="flex bg-slate-800 rounded-md p-0.5">
+                    {(['strict', 'standard', 'loose'] as const).map(level => (
+                        <button
+                            key={level}
+                            onClick={() => setStrictness(level)}
+                            className={`px-3 py-1 rounded text-xs font-medium transition-all ${
+                                strictness === level 
+                                ? 'bg-dj-panel text-white shadow-sm ring-1 ring-white/10' 
+                                : 'text-slate-500 hover:text-slate-300'
+                            }`}
+                        >
+                            {level === 'strict' ? '严谨' : level === 'standard' ? '标准' : '宽松'}
+                        </button>
+                    ))}
+                </div>
             </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-2 space-y-2 pb-20">
+      <div className="flex-1 overflow-y-auto pr-2 space-y-2 pb-20 custom-scrollbar">
         {setTracks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
             <Music2 className="w-12 h-12 mb-2 opacity-50" />
@@ -266,31 +156,40 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
         ) : (
           setTracks.map((track, index) => {
             const prevTrack = index > 0 ? setTracks[index - 1] : null;
+            const isDragging = draggedIndex === index;
+
+            // --- Analysis Logic ---
+            const issues = analyzeTrackIssues(track, index, setTracks, setType, strictness);
+            const cueStrategy = calculateCueStrategy(track, setType);
+            
             const harmonicStatus = prevTrack ? calculateHarmonicStatus(prevTrack.key, track.key, strictness) : 'exact';
             const isCutMode = cutModes[track.id] || false;
             const aiAnalysis = analysisResults[track.id];
             const isAnalyzing = analyzingTransitions[track.id];
-            const issues = getContextIssues(track, index, setTracks, setType);
             
-            // Genre Highlight Logic
-            const isGenreMatch = highlightedGenre === track.genre;
-            const isGenreDimmed = highlightedGenre !== null && !isGenreMatch;
+            // Sync highlight
+            const trackCategory = getGenreCategory(track.genre);
+            const isGenreMatch = highlightedCategory === trackCategory;
+            const isGenreDimmed = highlightedCategory !== null && !isGenreMatch;
 
-            // BPM Calculation
+            // BPM Calc
             let bpmDiff = 0;
             let isDoubleTime = false;
             let isBpmClose = true;
             if (prevTrack) {
                 bpmDiff = track.bpm - prevTrack.bpm;
-                isDoubleTime = Math.abs(prevTrack.bpm - track.bpm * 2) <= 4 || Math.abs(prevTrack.bpm * 2 - track.bpm) <= 4;
+                isDoubleTime = Math.abs(prevTrack.bpm - track.bpm * 2) <= 5 || Math.abs(prevTrack.bpm * 2 - track.bpm) <= 5;
                 isBpmClose = Math.abs(bpmDiff) <= 6;
             }
-            const isBpmWarning = index > 0 && !isBpmClose && !isDoubleTime;
             const isMixable = isBpmClose || isDoubleTime;
-            const isDragging = draggedIndex === index;
+
+            // Energy Diff
+            let energyDiff = 0;
+            if (prevTrack) {
+                energyDiff = track.energy - prevTrack.energy;
+            }
 
             // Visual State
-            // Default Mix Logic for Border
             let baseBorderClass = 'border-l-transparent hover:border-l-dj-accent'; 
             let connectorColor = 'bg-slate-700';
 
@@ -305,15 +204,12 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
                 }
             }
 
-            // Apply Issue Tints
             const issueTint = getCardBackgroundTint(issues);
             
             if (issues.some(i => i.severity === 'critical') && !isCutMode) {
                 baseBorderClass = 'border-l-red-500';
             }
 
-            // Apply Genre Highlight Styling
-            // If matching genre, add a glow/ring. If not matching (and filter active), dim opacity/saturation.
             const containerStyle = isDragging 
                 ? 'opacity-50 scale-95' 
                 : isGenreDimmed 
@@ -323,6 +219,61 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
             const highlightClass = isGenreMatch 
                 ? 'ring-2 ring-indigo-500 ring-offset-2 ring-offset-[#0f172a] shadow-[0_0_15px_rgba(99,102,241,0.3)]' 
                 : '';
+
+            // Harmonic Badge Logic (Same as before)
+            let harmonicBadge = null;
+            if (index > 0 && prevTrack) {
+                 if (isCutMode) {
+                     harmonicBadge = (
+                        <span className="text-[10px] bg-slate-600 text-slate-200 px-2 py-0.5 rounded border border-slate-500 shadow-sm flex items-center gap-1">
+                            <Scissors className="w-2.5 h-2.5" /> 切歌
+                        </span>
+                     );
+                 } else if (harmonicStatus === 'clash') {
+                    harmonicBadge = (
+                        <span className="text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/20 flex items-center gap-1">
+                             <AlertOctagon className="w-2.5 h-2.5" /> 调性冲突
+                        </span>
+                    );
+                 } else {
+                     const actualEnergyDiff = track.energy - prevTrack.energy;
+                     let label = '和谐';
+                     let Icon = CheckCircle2;
+                     let colorClass = 'bg-blue-500/20 text-blue-400 border-blue-500/20'; 
+
+                     if (actualEnergyDiff >= 2) {
+                        label = '能量提升'; Icon = TrendingUp; colorClass = 'bg-cyan-500/20 text-cyan-400 border-cyan-500/20';
+                     } else if (actualEnergyDiff <= -2) {
+                        label = '能量回落'; Icon = TrendingDown; colorClass = 'bg-indigo-500/20 text-indigo-400 border-indigo-500/20';
+                     } else if (isDoubleTime) {
+                         label = '倍速混音'; Icon = Zap; colorClass = 'bg-purple-500/20 text-purple-400 border-purple-500/20';
+                     } else {
+                         const k1 = parseKey(prevTrack.key);
+                         const k2 = parseKey(track.key);
+                         if (k1 && k2) {
+                            if (k1.num === k2.num && k1.letter === k2.letter) {
+                                label = '完美叠歌'; Icon = Link; colorClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/20';
+                            } else if (k1.num === k2.num && k1.letter !== k2.letter) {
+                                label = '情绪转换'; Icon = ArrowRightLeft; colorClass = 'bg-teal-500/20 text-teal-400 border-teal-500/20';
+                            } else {
+                                let diff = k2.num - k1.num;
+                                if (diff === -11) diff = 1; if (diff === 11) diff = -1;
+                                if (diff === 1 || diff === 2) {
+                                    label = '调性推进'; Icon = ArrowUpRight; colorClass = 'bg-sky-500/20 text-sky-400 border-sky-500/20';
+                                } else if (diff === -1 || diff === -2) {
+                                    label = '调性收敛'; Icon = ArrowDownRight; colorClass = 'bg-slate-500/20 text-slate-400 border-slate-500/20';
+                                }
+                            }
+                         }
+                     }
+                     
+                     harmonicBadge = (
+                         <span className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${colorClass}`}>
+                             <Icon className="w-3 h-3" /> {label}
+                         </span>
+                     );
+                 }
+            }
 
             return (
               <div 
@@ -364,23 +315,36 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
 
                   <img src={track.coverUrl} alt="cover" className="w-12 h-12 rounded bg-slate-700 object-cover pointer-events-none" />
 
-                  <div className="flex-1 min-w-0 pointer-events-none select-none">
+                  <div className="flex-1 min-w-0 pointer-events-none select-none flex flex-col gap-1">
+                    
+                    {aiAnalysis && (
+                        <div className={`text-[10px] px-2 py-1.5 mb-1 rounded-md shadow-sm border backdrop-blur-md flex flex-col gap-0.5 w-full md:w-fit animate-in fade-in slide-in-from-top-1 duration-200
+                            ${aiAnalysis.type === 'cut' ? 'bg-orange-900/40 text-orange-200 border-orange-500/30' : 'bg-indigo-900/40 text-indigo-200 border-indigo-500/30'}`}>
+                            <div className="font-bold flex items-center gap-1.5">
+                                <Sparkles className="w-3 h-3" /> 
+                                <span>建议: {aiAnalysis.type === 'cut' ? '飞歌 (Cut)' : '混音 (Mix)'}</span>
+                            </div>
+                            <div className="opacity-90 leading-snug whitespace-normal break-words">{aiAnalysis.reasoning}</div>
+                        </div>
+                    )}
+
                     <div className="flex items-baseline justify-between">
-                      <h3 className="font-semibold text-white truncate">{track.title}</h3>
+                      <h3 className="font-semibold text-white truncate max-w-[200px]">{track.title}</h3>
                       <div className="flex items-center gap-1">
                           
                           {/* GENRE BADGE */}
                           <span 
                             onClick={(e) => {
                                 e.stopPropagation();
-                                setHighlightedGenre(highlightedGenre === track.genre ? null : track.genre);
+                                const newGenre = isGenreMatch ? null : track.genre; 
+                                onGenreClick(newGenre || '');
                             }}
                             className={`text-[10px] px-1.5 py-0.5 rounded ml-2 cursor-pointer pointer-events-auto transition-all border flex items-center gap-1
                                 ${isGenreMatch 
                                     ? 'bg-indigo-500 text-white border-indigo-400 font-bold' 
                                     : 'bg-slate-700/50 text-slate-400 border-transparent hover:border-slate-500 hover:text-slate-200 hover:bg-slate-700'
                                 }`}
-                            title={isGenreMatch ? "取消高亮" : `高亮所有 ${track.genre} 歌曲`}
+                            title={isGenreMatch ? "取消高亮" : `高亮所有 ${trackCategory} 风格`}
                           >
                              {isGenreMatch && <Tag className="w-2.5 h-2.5" />}
                              {track.genre}
@@ -391,89 +355,67 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
                           </span>
                       </div>
                     </div>
+                    
                     <p className="text-sm text-slate-400 truncate">{track.artist}</p>
                     
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                      <span className={`flex items-center gap-1 ${isBpmWarning ? 'text-amber-500 font-medium' : ''}`}>
-                        {isBpmWarning ? <AlertTriangle className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
+                      <span className={`flex items-center gap-1 ${index > 0 && !isMixable ? 'text-amber-500 font-medium' : ''}`}>
+                        {index > 0 && !isMixable ? <AlertTriangle className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
                         {track.bpm} BPM 
-                        {index > 0 && bpmDiff !== 0 && (
-                            <span className="opacity-75">
-                                ({bpmDiff > 0 ? '+' : ''}{bpmDiff})
-                                {isDoubleTime && <span className="ml-1 text-dj-accent font-bold">x2</span>}
-                            </span>
-                        )}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Zap className="w-3 h-3 text-yellow-500" /> {track.energy}
+                        <Zap className="w-3 h-3 text-yellow-500" /> 
+                        {track.energy}
                       </span>
                       <span className="flex items-center gap-1">
                         <Flame className={`w-3 h-3 ${track.resonance > 7 ? 'text-orange-500' : 'text-slate-600'}`} /> {track.resonance}
                       </span>
-                      <span>{track.duration}</span>
-                    </div>
-                  </div>
-                  
-                  {/* Issue Badges Stack */}
-                  {issues.length > 0 && (
-                      <div className="absolute top-2 right-12 z-10 pointer-events-none flex flex-col gap-1 items-end">
-                        {issues.map((issue, i) => (
-                           <div key={i} className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 w-fit backdrop-blur-sm shadow-sm animate-in fade-in slide-in-from-right-1
-                            ${getSeverityBadgeStyles(issue.severity)}`}
-                          >
-                             {issue.icon}
-                             {issue.message}
-                          </div>
-                        ))}
+                      
+                      {/* DURATION BADGE WITH STRATEGY */}
+                      <div className="flex items-center gap-1.5 ml-2 border-l border-slate-700 pl-3">
+                        <span className="opacity-50 line-through text-[10px]">{track.duration}</span>
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono border ${
+                            cueStrategy.type === 'quick' ? 'bg-indigo-900/30 text-indigo-300 border-indigo-500/30' :
+                            cueStrategy.type === 'extended' ? 'bg-amber-900/30 text-amber-300 border-amber-500/30' :
+                            cueStrategy.type === 'full' ? 'bg-emerald-900/30 text-emerald-300 border-emerald-500/30' :
+                            'bg-slate-700/50 text-slate-300 border-slate-600'
+                        }`} title={cueStrategy.description}>
+                            {getStrategyIcon(cueStrategy.type)}
+                            {cueStrategy.formattedDuration}
+                        </div>
+                        {cueStrategy.type !== 'standard' && (
+                             <span className="text-[9px] text-slate-500 hidden lg:inline-block">({cueStrategy.label})</span>
+                        )}
                       </div>
-                  )}
+                    </div>
+
+                    {/* ISSUE BADGES */}
+                    {issues.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                            {issues.map((issue) => (
+                            <div key={issue.id} className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 w-fit animate-in fade-in zoom-in duration-300
+                                ${getSeverityBadgeStyles(issue.severity)}`}
+                            >
+                                {getIssueIcon(issue.type)}
+                                {issue.message}
+                            </div>
+                            ))}
+                        </div>
+                    )}
+                  </div>
 
                   <button 
                     onClick={(e) => { e.stopPropagation(); onRemoveTrack(track.id); }}
-                    className="p-2 text-slate-500 hover:text-dj-danger hover:bg-dj-danger/10 rounded-full transition-colors ml-2 z-20"
+                    className="p-2 text-slate-500 hover:text-dj-danger hover:bg-dj-danger/10 rounded-full transition-colors ml-2 z-20 self-start"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
                 
-                {/* Harmonic / Transition Status */}
-                {index > 0 && (
-                   <div className="absolute -top-3 left-28 z-30 pointer-events-none transition-all duration-300 flex flex-col items-start gap-1">
-                       <div className="flex items-center">
-                            {isCutMode ? (
-                                <span className="text-[10px] bg-slate-600 text-slate-200 px-2 py-0.5 rounded border border-slate-500 shadow-sm flex items-center gap-1">
-                                    <Scissors className="w-2.5 h-2.5" /> 切歌
-                                </span>
-                            ) : (
-                                <>
-                                    {!isMixable && (
-                                        <span className="text-[10px] bg-amber-500/20 text-amber-400 px-1 rounded border border-amber-500/20 flex items-center gap-1 mr-1">
-                                            <AlertTriangle className="w-2 h-2" /> BPM 差异大
-                                        </span>
-                                    )}
-                                    {isMixable && (
-                                        <>
-                                            {harmonicStatus === 'exact' && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1 rounded border border-emerald-500/20 flex items-center gap-1">
-                                                {isDoubleTime ? <Zap className="w-2 h-2" /> : null} {isDoubleTime ? '倍速' : '完美'}
-                                            </span>}
-                                            {harmonicStatus === 'compatible' && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-1 rounded border border-blue-500/20">
-                                                {isDoubleTime ? '倍速和谐' : '和谐'}
-                                            </span>}
-                                            {harmonicStatus === 'clash' && <span className="text-[10px] bg-red-500/20 text-red-400 px-1 rounded border border-red-500/20">调性冲突</span>}
-                                        </>
-                                    )}
-                                </>
-                            )}
-                       </div>
-                        {aiAnalysis && (
-                            <div className={`text-[10px] px-2 py-1 rounded shadow-lg border backdrop-blur-md animate-in fade-in zoom-in slide-in-from-left-2 duration-300 max-w-[200px]
-                                ${aiAnalysis.type === 'cut' ? 'bg-orange-900/80 text-orange-200 border-orange-500/50' : 'bg-indigo-900/80 text-indigo-200 border-indigo-500/50'}`}>
-                                <div className="font-bold flex items-center gap-1">
-                                    <Sparkles className="w-2 h-2" /> 建议: {aiAnalysis.type === 'cut' ? '飞歌 (Cut)' : '混音 (Mix)'}
-                                </div>
-                                <div className="opacity-90 leading-tight mt-0.5">{aiAnalysis.reasoning}</div>
-                            </div>
-                        )}
+                {/* Connector Badge */}
+                {index > 0 && harmonicBadge && (
+                   <div className="absolute -top-3 left-28 z-30 pointer-events-none flex items-center">
+                        {harmonicBadge}
                    </div>
                 )}
               </div>
@@ -484,5 +426,3 @@ const SetBuilder: React.FC<SetBuilderProps> = ({ setTracks, onRemoveTrack, onReo
     </div>
   );
 };
-
-export default SetBuilder;
