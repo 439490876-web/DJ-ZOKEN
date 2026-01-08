@@ -98,7 +98,9 @@ export const calculateCueStrategy = (track: Track, setType: SetType): CueStrateg
 
     // Final Sanity Checks
     if (estimated > totalSeconds) estimated = totalSeconds;
-    if (estimated < 60) estimated = 60; // Minimum 1 min play (unless it's a tool/loop, logic excluded for brevity)
+    if (estimated < 60) {
+        estimated = Math.min(60, totalSeconds);
+    } // Minimum 1 min play (unless it's a tool/loop, logic excluded for brevity)
 
     return {
         estimatedSeconds: Math.floor(estimated),
