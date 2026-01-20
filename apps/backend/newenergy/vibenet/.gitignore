@@ -1,0 +1,7 @@
+data
+checkpoints/
+logs/
+runs/
+dist/
+venv/
+__pycache__/

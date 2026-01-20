@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+.vite/
+*.log
+
+# Python / Backend
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Model / Large files (adjust as needed)
+*.pb
+*.onnx
+*.pt
+*.pth
+*.tflite
+models/
+checkpoints/
+data/
+outputs/
+
+# Local secrets
+*.key
+*.pem
