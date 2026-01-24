@@ -28,6 +28,7 @@ export interface Track {
   genre: string | null;
   duration: string; // MM:SS
   coverUrl?: string;
+  coverKey?: string | null;
   filePath?: string | null;
   status?: 'ok' | 'failed';
   error?: string | null;
