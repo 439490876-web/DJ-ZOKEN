@@ -29,3 +29,5 @@ outputs/
 # Local secrets
 *.key
 *.pem
+
+.worktrees/
