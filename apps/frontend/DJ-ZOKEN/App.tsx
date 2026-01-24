@@ -5,6 +5,7 @@ import { analyzeTransitionAi, getAiSuggestions } from './services/geminiService'
 import { analyzeSet, toCamelotKey } from './services/analysisService';
 import { analyzeStyle } from './services/styleAnalysisService';
 import { calculateTotalSetDuration, formatSecondsToDuration } from './services/cueService';
+import { attachFilePath } from './services/filePath';
 import EnergyChart from './components/EnergyChart';
 import { SetBuilder } from './components/SetBuilder';
 import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye } from 'lucide-react';
@@ -304,7 +305,7 @@ const App: React.FC = () => {
       const error = analysis?.status === 'failed'
         ? analysis.error
         : (styleResult?.status === 'failed' ? styleResult?.error : null);
-      return {
+      const baseTrack = {
         id: `local-${crypto.randomUUID()}`,
         title,
         artist,
@@ -318,6 +319,7 @@ const App: React.FC = () => {
         error,
         filenameDisplay
       } as Track;
+      return attachFilePath(baseTrack, file);
     }));
 
     setLibrary(prev => [...newTracks, ...prev]);
