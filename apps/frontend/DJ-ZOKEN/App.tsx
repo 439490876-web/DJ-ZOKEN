@@ -6,6 +6,10 @@ import { analyzeSet, toCamelotKey } from './services/analysisService';
 import { analyzeStyle } from './services/styleAnalysisService';
 import { calculateTotalSetDuration, formatSecondsToDuration } from './services/cueService';
 import { attachFilePath } from './services/filePath';
+import { buildCoverKey } from './services/coverKey';
+import { createLibraryCache } from './services/libraryCache';
+import { createCoverCache } from './services/coverCache';
+import { hydrateCoverUrls } from './services/libraryHydration';
 import EnergyChart from './components/EnergyChart';
 import { SetBuilder } from './components/SetBuilder';
 import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye } from 'lucide-react';
@@ -44,9 +48,26 @@ const App: React.FC = () => {
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const analysisApiBase = (import.meta as any).env?.VITE_ANALYSIS_API || 'http://localhost:8000';
+  const libraryCache = useMemo(() => createLibraryCache(window.localStorage), []);
+  const coverCache = useMemo(() => (typeof indexedDB === 'undefined' ? null : createCoverCache(indexedDB)), []);
+  const cachedCoverKeysRef = useRef<Set<string>>(new Set());
+  const skipNextCacheWriteRef = useRef(false);
 
-  // 初始化: 加载曲库
+  // 初始化: 加载曲库（优先缓存）
   useEffect(() => {
+    const cached = libraryCache.load();
+    if (cached?.library?.length) {
+      const ordered = applyLibraryOrder(cached.library, cached.libraryOrder);
+      setLibrary(ordered);
+      setIsLoading(false);
+      if (coverCache) {
+        hydrateCoverUrls(ordered, coverCache, URL.createObjectURL)
+          .then(setLibrary)
+          .catch((err) => console.warn('Cover hydration failed', err));
+      }
+      return;
+    }
+
     const fetchLibrary = async () => {
       try {
         const data = await trackService.getAllTracks();
@@ -58,7 +79,7 @@ const App: React.FC = () => {
       }
     };
     fetchLibrary();
-  }, []);
+  }, [libraryCache, coverCache]);
 
   useEffect(() => {
     const stored = window.localStorage.getItem('gemini_api_key');
@@ -68,6 +89,42 @@ const App: React.FC = () => {
     }
   }, []);
 
+  useEffect(() => {
+    if (skipNextCacheWriteRef.current) {
+      skipNextCacheWriteRef.current = false;
+      return;
+    }
+    const libraryOrder = library.map(track => track.id);
+    const sanitizedLibrary = library.map((track) => {
+      if (typeof track.coverUrl === 'string' && track.coverUrl.startsWith('http')) {
+        return track;
+      }
+      const { coverUrl, ...rest } = track;
+      return rest;
+    });
+    libraryCache.save({ library: sanitizedLibrary, libraryOrder });
+  }, [library, libraryCache]);
+
+  useEffect(() => {
+    if (!coverCache) return;
+    const maybeCache = async () => {
+      for (const track of library) {
+        const coverKey = track.coverKey;
+        const coverUrl = track.coverUrl;
+        if (!coverKey || !coverUrl || !coverUrl.startsWith('blob:')) continue;
+        if (cachedCoverKeysRef.current.has(coverKey)) continue;
+        try {
+          const blob = await fetch(coverUrl).then(res => res.blob());
+          await coverCache.put(coverKey, blob);
+          cachedCoverKeysRef.current.add(coverKey);
+        } catch (err) {
+          console.warn('Cover cache write failed', err);
+        }
+      }
+    };
+    void maybeCache();
+  }, [library, coverCache]);
+
   const parseLocalFileName = (fileName?: string | null) => {
     const safeName = fileName || '';
     const base = safeName.replace(/\.[^/.]+$/, '').trim();
@@ -76,6 +133,14 @@ const App: React.FC = () => {
       return { artist: parts[0], title: parts.slice(1).join(' - ') };
     }
     return { artist: 'Local', title: base || 'Untitled' };
+  };
+
+  const applyLibraryOrder = (tracks: Track[], order?: string[] | null) => {
+    if (!order || order.length === 0) return tracks;
+    const map = new Map(tracks.map(track => [track.id, track]));
+    const ordered = order.map(id => map.get(id)).filter(Boolean) as Track[];
+    const rest = tracks.filter(track => !order.includes(track.id));
+    return [...ordered, ...rest];
   };
 
   const getDisplayKey = (value: string) => {
@@ -319,7 +384,9 @@ const App: React.FC = () => {
         error,
         filenameDisplay
       } as Track;
-      return attachFilePath(baseTrack, file);
+      const withPath = attachFilePath(baseTrack, file);
+      const coverKey = buildCoverKey(file, withPath.filePath ?? null);
+      return { ...withPath, coverKey };
     }));
 
     setLibrary(prev => [...newTracks, ...prev]);
@@ -351,6 +418,25 @@ const App: React.FC = () => {
     window.localStorage.removeItem('gemini_api_key');
     setApiKeyInput('');
     setHasApiKey(false);
+  };
+
+  const handleClearCache = async () => {
+    skipNextCacheWriteRef.current = true;
+    for (const track of library) {
+      if (track.coverUrl && track.coverUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(track.coverUrl);
+      }
+    }
+    libraryCache.clear();
+    if (coverCache) {
+      try {
+        await coverCache.clear();
+      } catch (err) {
+        console.warn('Cover cache clear failed', err);
+      }
+    }
+    setLibrary([]);
+    setSetTracks([]);
   };
 
   const saveSet = async () => {
@@ -520,6 +606,16 @@ const App: React.FC = () => {
               </div>
           )}
 
+          <button
+            onClick={handleClearCache}
+            className="w-full py-2 px-3 rounded-lg flex items-center justify-between text-xs font-bold transition-all border bg-slate-800 border-slate-700 text-slate-400 hover:text-white hover:bg-slate-700"
+          >
+            <div className="flex items-center gap-2">
+              <RotateCcw className="w-4 h-4" />
+              <span>清除缓存</span>
+            </div>
+          </button>
+          
           {/* 风格过滤器 */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
             <button 

@@ -8,4 +8,11 @@ describe('hydrateCoverUrls', () => {
     const result = await hydrateCoverUrls(library as any, coverCache as any, () => 'blob:1')
     expect(result[0].coverUrl).toBe('blob:1')
   })
+
+  it('does not override existing coverUrl', async () => {
+    const library = [{ id: '1', coverKey: 'k1', coverUrl: 'keep' }]
+    const coverCache = { get: async () => new Blob(['x']) }
+    const result = await hydrateCoverUrls(library as any, coverCache as any, () => 'blob:1')
+    expect(result[0].coverUrl).toBe('keep')
+  })
 })
