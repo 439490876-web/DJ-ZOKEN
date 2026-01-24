@@ -1,14 +1,8 @@
-import { createRequire } from 'node:module'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { createExportHandler } from './ipc.js'
-import { exportToRekordbox } from './export/rekordbox.js'
-import { exportToSerato } from './export/serato.js'
-
-const require = createRequire(import.meta.url)
 const { app, BrowserWindow, ipcMain } = require('electron')
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const path = require('node:path')
+const { createExportHandler } = require('./ipc')
+const { exportToRekordbox } = require('./export/rekordbox')
+const { exportToSerato } = require('./export/serato')
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -19,7 +13,7 @@ const createWindow = () => {
     },
   })
 
-  const devUrl = process.env.VITE_DEV_SERVER_URL
+  const devUrl = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL
   if (devUrl) {
     void win.loadURL(devUrl)
     return

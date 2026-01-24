@@ -1,4 +1,4 @@
-export const isExportPayload = (value) => {
+const isExportPayload = (value) => {
   return (
     Boolean(value) &&
     (value.target === 'serato' || value.target === 'rekordbox') &&
@@ -8,7 +8,7 @@ export const isExportPayload = (value) => {
   )
 }
 
-export const createExportHandler = (exporter) => {
+const createExportHandler = (exporter) => {
   return async (payload) => {
     if (!isExportPayload(payload)) {
       return { ok: false, message: 'Invalid export payload' }
@@ -19,4 +19,9 @@ export const createExportHandler = (exporter) => {
       return { ok: false, message: err?.message || 'Export failed' }
     }
   }
+}
+
+module.exports = {
+  isExportPayload,
+  createExportHandler,
 }

@@ -1,6 +1,6 @@
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import { createExportHandler } from '../src/ipc.js'
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const { createExportHandler } = require('../src/ipc')
 
 test('export handler returns ok result', async () => {
   const handler = createExportHandler(async () => ({ ok: true, message: 'ok' }))

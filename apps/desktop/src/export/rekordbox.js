@@ -1,7 +1,7 @@
-import { createRequire } from 'node:module'
+const { createRequire } = require('node:module')
 
-const require = createRequire(import.meta.url)
-const Database = require('better-sqlite3')
+const requireNative = createRequire(__filename)
+const Database = requireNative('better-sqlite3')
 
 const hasTable = (db, name) => {
   const row = db
@@ -10,7 +10,7 @@ const hasTable = (db, name) => {
   return Boolean(row && row.name)
 }
 
-export const exportToRekordbox = ({ dbPath, setName, filePaths }) => {
+const exportToRekordbox = ({ dbPath, setName, filePaths }) => {
   const db = new Database(dbPath)
   const requiredTables = ['tracks', 'playlists', 'playlist_tracks']
   const missing = requiredTables.filter((table) => !hasTable(db, table))
@@ -37,4 +37,8 @@ export const exportToRekordbox = ({ dbPath, setName, filePaths }) => {
 
   transaction()
   db.close()
+}
+
+module.exports = {
+  exportToRekordbox,
 }

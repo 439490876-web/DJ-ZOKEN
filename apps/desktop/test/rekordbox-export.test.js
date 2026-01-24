@@ -1,13 +1,13 @@
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
-import { createRequire } from 'node:module'
-import { exportToRekordbox } from '../src/export/rekordbox.js'
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const os = require('node:os')
+const path = require('node:path')
+const { createRequire } = require('node:module')
+const { exportToRekordbox } = require('../src/export/rekordbox')
 
-const require = createRequire(import.meta.url)
-const Database = require('better-sqlite3')
+const requireNative = createRequire(__filename)
+const Database = requireNative('better-sqlite3')
 
 const createSchema = (db) => {
   db.exec(`

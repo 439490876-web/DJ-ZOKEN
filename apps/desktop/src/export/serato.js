@@ -1,5 +1,5 @@
-import fs from 'node:fs'
-import path from 'node:path'
+const fs = require('node:fs')
+const path = require('node:path')
 
 const safeFilename = (name) => {
   const trimmed = name.trim() || 'Untitled'
@@ -15,7 +15,7 @@ const backupFile = (source, backupDir) => {
   fs.copyFileSync(source, path.join(backupDir, `${filename}.bak`))
 }
 
-export const exportToSerato = ({ seratoDir, setName, filePaths }) => {
+const exportToSerato = ({ seratoDir, setName, filePaths }) => {
   const cratesDir = path.join(seratoDir, 'Subcrates')
   fs.mkdirSync(cratesDir, { recursive: true })
 
@@ -39,4 +39,8 @@ export const exportToSerato = ({ seratoDir, setName, filePaths }) => {
     const updated = `${text}CRATE: ${crateName}\n`
     fs.writeFileSync(dbPath, updated)
   }
+}
+
+module.exports = {
+  exportToSerato,
 }
