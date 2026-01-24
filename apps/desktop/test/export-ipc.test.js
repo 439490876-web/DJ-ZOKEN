@@ -1,0 +1,15 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { createExportHandler } from '../src/ipc.js'
+
+test('export handler returns ok result', async () => {
+  const handler = createExportHandler(async () => ({ ok: true, message: 'ok' }))
+  const result = await handler({ target: 'serato', setName: 'My Set', filePaths: ['/a.mp3'] })
+  assert.deepEqual(result, { ok: true, message: 'ok' })
+})
+
+test('export handler validates payload', async () => {
+  const handler = createExportHandler(async () => ({ ok: true, message: 'ok' }))
+  const result = await handler({ target: 'bad', setName: 'My Set', filePaths: [] })
+  assert.equal(result.ok, false)
+})

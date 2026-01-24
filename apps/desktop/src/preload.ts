@@ -1,5 +1,5 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  exportSet: async () => ({ ok: false, message: 'not implemented' })
+  exportSet: (payload: unknown) => ipcRenderer.invoke('export:set', payload),
 })
