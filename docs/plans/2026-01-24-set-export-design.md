@@ -1,10 +1,10 @@
 # Set 一键导出到 Serato / Rekordbox（桌面版）设计方案
 
 ## 目标与范围
-- 目标：为当前编排 Set 与已保存 Set 提供一键导出能力，用户可选择导出到 Serato 或 Rekordbox。
+- 目标：为当前编排 Set（桌面版）提供一键导出能力，用户可选择导出到 Serato 或 Rekordbox。
 - 必须即时可见：导出完成后在 Serato / Rekordbox 内**立刻出现**新建的文件夹/播放列表，无需手动导入或重启。
 - 平台：**macOS 优先**。
-- 交互：导出目标可选（Serato 或 Rekordbox），导出对象可选（当前 Set / 已保存 Set）。
+- 交互：导出目标可选（Serato 或 Rekordbox）；导出对象当前仅支持“当前编排”。
 - 数据：仅导出**本地绝对路径**，不包含附加字段。
 
 ## 架构与数据流
@@ -20,32 +20,33 @@
 - 在 Set 编排区新增“导出”入口（靠近“保存 Setlist”按钮）。
 - 导出弹窗字段：
   - 导出目标：Serato / Rekordbox（单选）
-  - 导出对象：当前 Set / 已保存 Set（单选）
-  - 导出位置：默认上次目录，可手动选择（文件夹选择器）
+  - 导出对象：当前编排（锁定）
+  - 导出位置：由桌面端环境变量指定（`SERATO_DIR` / `REKORDBOX_DB_PATH`）
 - 预校验：
-  - 若 Set 中存在缺少 `filePath` 的歌曲，提示“跳过缺失 / 取消导出”。
-- 完成提示：显示“导出成功”，并提供“打开目录”按钮。
+  - 若 Set 中存在缺少 `filePath` 的歌曲，提示缺失数量。
+- 完成提示：显示“导出已提交”或失败原因。
 
 ## 即时出现实现（数据库写入）
 ### Serato
-- 定位：`~/Music/_Serato_` 下的数据库与 crate 结构。
+- 定位：通过 `SERATO_DIR` 指定（通常为 `~/Music/_Serato_`）。
 - 写入策略：生成/更新 `.crate` 文件，对应 Set 名称。
-- 为保证即时可见，直接写入 Serato 的数据库/索引（需适配具体版本）。
-- 写入前必须备份：`~/Music/_Serato_/Backup/` 目录。
+- 即时可见策略：
+  - 生成 `Subcrates/<Set>.crate`。
+  - 若数据库文件为文本格式，追加 `CRATE: <Set>` 记录；若检测为二进制则仅写 crate。
+- 写入前备份：当前实现会将 `database` / `database V2` 备份到 `backup/` 目录。
 
 ### Rekordbox
-- 定位：`~/Library/Pioneer/rekordbox/` 下 `master.db`（SQLite）。
-- 事务写入：
-  - 若曲目不存在，先插入 Track 记录（以绝对路径为主键/索引）。
-  - 写入 Playlist 与 Track 的关联表。
-- 写入前必须备份 `master.db`（按时间戳拷贝）。
+- 定位：通过 `REKORDBOX_DB_PATH` 指定 `master.db`（SQLite）。
+- 事务写入（当前最小表结构）：
+  - `tracks(path)`、`playlists(name)`、`playlist_tracks(playlist_id, track_id)`。
+- 备注：实际 Rekordbox 数据库结构需按版本适配；当前实现为最小可用原型。
 
 ## 风险与回滚
 - 风险：数据库结构随版本变更；写入失败可能损坏用户库。
 - 控制：
-  - 强制备份 + 事务写入 + 失败回滚。
-  - 首次运行提示检测到的 DB 路径与版本，用户确认后写入。
-  - 失败时给出明确错误提示（权限不足、结构不兼容等）。
+  - Serato：自动备份 `database` / `database V2`。
+  - Rekordbox：建议导出前手动备份 `master.db`（当前实现未自动备份）。
+  - 失败时给出明确错误提示（路径未配置、权限不足、结构不兼容等）。
 
 ## 测试策略
 - 集成测试：准备包含多首歌的 Set，验证导出后 Serato / Rekordbox 立刻出现新列表。
@@ -55,4 +56,3 @@
 ## 约束与假设
 - 用户允许应用访问本地文件系统与数据库文件。
 - 本功能仅面向桌面版；Web 版不支持绝对路径即时导出。
-
