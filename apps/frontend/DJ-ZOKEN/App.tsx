@@ -10,8 +10,10 @@ import { buildCoverKey } from './services/coverKey';
 import { createLibraryCache } from './services/libraryCache';
 import { createCoverCache } from './services/coverCache';
 import { hydrateCoverUrls } from './services/libraryHydration';
+import { ExportPayload } from './services/exportService';
 import EnergyChart from './components/EnergyChart';
 import { SetBuilder } from './components/SetBuilder';
+import { ExportDialog } from './components/ExportDialog';
 import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye } from 'lucide-react';
 
 type SortKey = 'bpm' | 'key' | 'energy' | 'resonance';
@@ -46,6 +48,9 @@ const App: React.FC = () => {
   const [hasApiKey, setHasApiKey] = useState(false);
   const [isLibraryDragOver, setIsLibraryDragOver] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const [exportDefaultName, setExportDefaultName] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const analysisApiBase = (import.meta as any).env?.VITE_ANALYSIS_API || 'http://localhost:8000';
   const libraryCache = useMemo(() => createLibraryCache(window.localStorage), []);
@@ -449,6 +454,34 @@ const App: React.FC = () => {
     };
     await trackService.saveSetList(setList);
     alert(`Set (${setType} 模式) 已保存!`);
+  };
+
+  const openExportDialog = () => {
+    setExportDefaultName(`Set ${new Date().toLocaleDateString()}`);
+    setIsExportOpen(true);
+  };
+
+  const handleExportConfirm = async (payload: ExportPayload) => {
+    const api = (window as any).electronAPI;
+    if (!api || typeof api.exportSet !== 'function') {
+      alert('导出功能仅桌面版可用');
+      return;
+    }
+    try {
+      setIsExporting(true);
+      const result = await api.exportSet(payload);
+      if (result && result.ok === false) {
+        alert(result.message || '导出失败');
+      } else {
+        alert('导出已提交');
+        setIsExportOpen(false);
+      }
+    } catch (err) {
+      console.error('Export failed', err);
+      alert('导出失败');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // --- 排序逻辑 ---
@@ -910,6 +943,13 @@ const App: React.FC = () => {
             >
                 <Save className="w-4 h-4" /> 保存 Setlist
             </button>
+            <button
+                onClick={openExportDialog}
+                disabled={setTracks.length === 0}
+                className="flex-1 py-3 rounded-lg border border-slate-600 text-slate-200 hover:text-white hover:bg-slate-800 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                <ArrowUp className="w-4 h-4" /> 导出
+            </button>
         </div>
       </div>
 
@@ -1118,6 +1158,14 @@ const App: React.FC = () => {
         </div>
 
       </div>
+
+      <ExportDialog
+        open={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        onConfirm={handleExportConfirm}
+        tracks={setTracks}
+        defaultSetName={exportDefaultName || `Set ${new Date().toLocaleDateString()}`}
+      />
 
     </div>
   );
