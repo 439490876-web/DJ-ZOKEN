@@ -19,20 +19,29 @@ export type SetType = 'warmup' | 'prime' | 'closing';
 
 export interface Track {
   id: string;
+  sourceId?: string; // 原始曲库 ID，用于同步更新
+  folderIds?: string[];
   title: string;
   artist: string;
   bpm: number | null;
   key: MusicalKey | string | null;
-  energy: number; // 1-10 (Physical energy / Loudness)
-  resonance: number; // 1-10 (Popularity / Sing-along factor)
+  bpmSource?: string | null;
+  keySource?: string | null;
+  analysisWarnings?: string[] | null;
+  energy: number | null; // 1-10 (Physical energy / Loudness)
+  resonance: number | null; // 1-10 (Popularity / Sing-along factor)
+  heatStatus?: 'pending' | 'ok' | 'failed';
+  heatScoreRaw?: number | null;
+  heatSource?: string | null;
   genre: string | null;
   duration: string; // MM:SS
   coverUrl?: string;
-  coverKey?: string | null;
   filePath?: string | null;
-  status?: 'ok' | 'failed';
+  heatError?: string | null;
+  status?: 'ok' | 'failed' | 'pending';
   error?: string | null;
   filenameDisplay?: string | null;
+  fileSignature?: string | null;
 }
 
 export interface SetList {
@@ -58,7 +67,9 @@ export interface BridgeRecommendation {
 // Service Interfaces
 export interface ITrackService {
   getAllTracks(): Promise<Track[]>;
-  saveSetList(setList: SetList): Promise<void>;
+  getSetLists(): Promise<SetList[]>;
+  saveSetList(setList: SetList): Promise<SetList>;
+  deleteSetList(setListId: string): Promise<void>;
 }
 
 // AI Types

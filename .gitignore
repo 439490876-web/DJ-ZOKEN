@@ -31,3 +31,8 @@ outputs/
 *.pem
 
 .worktrees/
+
+# Local virtualenvs
+apps/backend/bpmkey_backend/backend/.venv/
+# Backup files
+*.bak

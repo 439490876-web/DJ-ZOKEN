@@ -10,8 +10,18 @@ const createWindow = () => {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      sandbox: false,
+      contextIsolation: false,
     },
   })
+
+  if (process.env.ELECTRON_PATH_DEBUG === '1') {
+    win.webContents.on('console-message', (_event, _level, message) => {
+      if (message.includes('[pathmap]') || message.includes('[export-path]') || message.includes('[export-payload]')) {
+        console.log(message)
+      }
+    })
+  }
 
   const devUrl = process.env.ELECTRON_RENDERER_URL || process.env.VITE_DEV_SERVER_URL
   if (devUrl) {
@@ -30,7 +40,7 @@ ipcMain.handle(
       if (!dbPath) {
         return { ok: false, message: 'Missing REKORDBOX_DB_PATH' }
       }
-      exportToRekordbox({
+      await exportToRekordbox({
         dbPath,
         setName: payload.setName,
         filePaths: payload.filePaths,
@@ -42,12 +52,12 @@ ipcMain.handle(
     if (!seratoDir) {
       return { ok: false, message: 'Missing SERATO_DIR' }
     }
-    exportToSerato({
+    const result = await exportToSerato({
       seratoDir,
       setName: payload.setName,
       filePaths: payload.filePaths,
     })
-    return { ok: true, message: 'serato export ok' }
+    return { ok: true, message: 'serato export ok', cratePath: result?.cratePath }
   })
 )
 

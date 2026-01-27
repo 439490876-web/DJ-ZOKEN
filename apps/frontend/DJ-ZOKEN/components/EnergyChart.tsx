@@ -47,7 +47,8 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
     title: track.title,
     energy: track.energy,
     bpm: track.bpm,
-    resonance: track.resonance // Used for coloring / 用于着色
+    resonance: track.resonance, // Used for coloring / 用于着色
+    heatStatus: track.heatStatus
   }));
 
   // Slice data for current zoom level / 截取当前缩放级别的数据
@@ -213,11 +214,15 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                         : 0;
                     
                     // --- Color Mapping Logic (颜色映射逻辑) ---
-                    let color = '#22d3ee'; // Default 4-5: Cyan (常规/Standard)
-                    if (entry.resonance >= 10) color = '#c084fc'; // 10: Fuchsia/Purple (炸场/Anthem)
-                    else if (entry.resonance >= 8) color = '#f43f5e'; // 8-9: Rose (热门/Hit)
-                    else if (entry.resonance >= 6) color = '#fbbf24'; // 6-7: Amber (流行/Popular)
-                    else if (entry.resonance <= 3) color = '#64748b'; // 1-3: Slate (冷门/Deep)
+                    const heatReady = entry.heatStatus === 'ok' && typeof entry.resonance === 'number';
+                    let color = '#64748b'; // Default neutral when heat not ready
+                    if (heatReady) {
+                        if (entry.resonance >= 10) color = '#c084fc'; // 10: Fuchsia/Purple (炸场/Anthem)
+                        else if (entry.resonance >= 8) color = '#f43f5e'; // 8-9: Rose (热门/Hit)
+                        else if (entry.resonance >= 6) color = '#fbbf24'; // 6-7: Amber (流行/Popular)
+                        else if (entry.resonance <= 3) color = '#64748b'; // 1-3: Slate (冷门/Deep)
+                        else color = '#22d3ee'; // 4-5: Cyan (常规/Standard)
+                    }
                     
                     return <stop key={index} offset={`${offset}%`} stopColor={color} />;
                 })}
@@ -248,21 +253,27 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
               contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9', fontSize: '10px' }}
               itemStyle={{ color: '#06b6d4' }}
               labelStyle={{ display: 'none' }}
-              formatter={(value: number, name: string, props: any) => [
-                  <div key="tooltip" className="flex flex-col gap-1">
-                      <span>Energy: {value}/10</span>
-                      {/* Dynamic color in tooltip / 工具提示中的动态颜色 */}
-                      <span className={`flex items-center gap-1 ${
-                          props.payload.resonance >= 10 ? 'text-fuchsia-400 font-bold' :
-                          props.payload.resonance >= 8 ? 'text-rose-400 font-bold' : 
-                          props.payload.resonance >= 6 ? 'text-amber-400' :
-                          props.payload.resonance <= 3 ? 'text-slate-400' : 'text-cyan-400'
-                      }`}>
-                          <Flame className="w-3 h-3" /> Resonance: {props.payload.resonance}/10
-                      </span>
-                  </div>,
-                  `#${props.payload.originalIndex} ${props.payload.title}`
-              ]}
+              formatter={(value: number, name: string, props: any) => {
+                  const heatReady = props.payload.heatStatus === 'ok' && typeof props.payload.resonance === 'number';
+                  const resonanceValue = heatReady ? props.payload.resonance : null;
+                  const resonanceLabel = heatReady ? `${resonanceValue}/10` : (props.payload.heatStatus === 'pending' ? '正在解析' : '—');
+                  const resonanceClass = heatReady
+                    ? (resonanceValue >= 10 ? 'text-fuchsia-400 font-bold' :
+                      resonanceValue >= 8 ? 'text-rose-400 font-bold' : 
+                      resonanceValue >= 6 ? 'text-amber-400' :
+                      resonanceValue <= 3 ? 'text-slate-400' : 'text-cyan-400')
+                    : 'text-slate-400';
+                  return [
+                    <div key="tooltip" className="flex flex-col gap-1">
+                        <span>Energy: {value}/10</span>
+                        {/* Dynamic color in tooltip / 工具提示中的动态颜色 */}
+                        <span className={`flex items-center gap-1 ${resonanceClass}`}>
+                            <Flame className="w-3 h-3" /> Resonance: {resonanceLabel}
+                        </span>
+                    </div>,
+                    `#${props.payload.originalIndex} ${props.payload.title}`
+                  ];
+              }}
             />
             {/* The Main Area (主要区域) */}
             <Area 

@@ -9,13 +9,18 @@ const isExportPayload = (value) => {
 }
 
 const createExportHandler = (exporter) => {
-  return async (payload) => {
+  return async (_event, payload) => {
+    console.log('[export-ipc] begin ' + JSON.stringify(payload))
     if (!isExportPayload(payload)) {
+      console.log('[export-ipc] invalid payload ' + JSON.stringify(payload))
       return { ok: false, message: 'Invalid export payload' }
     }
     try {
-      return await exporter(payload)
+      const result = await exporter(payload)
+      console.log('[export-ipc] done ' + JSON.stringify(result))
+      return result
     } catch (err) {
+      console.log('[export-ipc] error ' + String(err))
       return { ok: false, message: err?.message || 'Export failed' }
     }
   }

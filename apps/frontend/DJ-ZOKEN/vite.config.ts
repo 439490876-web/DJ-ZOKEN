@@ -3,8 +3,7 @@ import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
@@ -12,6 +11,22 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: {
+          '/api': {
+            target: 'http://127.0.0.1:8011',
+            changeOrigin: true,
+          },
+          '/style': {
+            target: 'http://127.0.0.1:8010',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/style/, '')
+          },
+          '/heat': {
+            target: 'http://127.0.0.1:8002',
+            changeOrigin: true,
+            rewrite: (path) => path.replace(/^\/heat/, '')
+          }
+        }
       },
       plugins: [react()],
       define: {
@@ -22,10 +37,6 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      },
-      test: {
-        environment: 'jsdom',
-        setupFiles: './vitest.setup.ts',
-      },
+      }
     };
 });

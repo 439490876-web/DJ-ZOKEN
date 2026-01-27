@@ -25,6 +25,7 @@ class TrackResult(BaseModel):
     bpm_display: str
     key_camelot: str
     key_text: str
+    energy: Optional[float] = None
     confidence: Confidence
     source: str
     details: TrackDetails
@@ -40,3 +41,21 @@ class BatchSubmitResponse(BaseModel):
     ok: bool
     job_id: str
     total: int
+
+
+class SetListPayload(BaseModel):
+    id: str
+    name: str
+    type: str
+    tracks: List[Dict[str, Any]] = Field(default_factory=list)
+    totalDuration: str
+
+
+class SetListsResponse(BaseModel):
+    ok: bool
+    setlists: List[SetListPayload]
+
+
+class SetListResponse(BaseModel):
+    ok: bool
+    setlist: SetListPayload

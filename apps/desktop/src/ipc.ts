@@ -1,11 +1,11 @@
 export type ExportTarget = 'serato' | 'rekordbox'
 export type ExportPayload = { target: ExportTarget; setName: string; filePaths: string[] }
-export type ExportResult = { ok: boolean; message?: string }
+export type ExportResult = { ok: boolean; message?: string; cratePath?: string; playlistName?: string }
 
 export const createExportHandler = (
   exporter: (payload: ExportPayload) => Promise<ExportResult> | ExportResult
 ) => {
-  return async (payload: unknown): Promise<ExportResult> => {
+  return async (_event: unknown, payload: unknown): Promise<ExportResult> => {
     if (!isExportPayload(payload)) {
       return { ok: false, message: 'Invalid export payload' }
     }

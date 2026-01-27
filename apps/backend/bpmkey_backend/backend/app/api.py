@@ -9,9 +9,10 @@ from typing import List, Optional
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .models import AnalyzeResponse, BatchSubmitResponse
+from .models import AnalyzeResponse, BatchSubmitResponse, SetListPayload, SetListResponse, SetListsResponse
 from .services.analyzer import analyze_bpm_key
 from .services.jobs import job_manager
+from .services.setlists import list_setlists, upsert_setlist, delete_setlist
 from .utils.audio_io import TempAudioFile, save_local_file, save_upload_file
 
 logger = logging.getLogger("analyzer")
@@ -30,6 +31,7 @@ def _build_error_track(filename: str, error: str) -> dict:
         "bpm_display": "0.0",
         "key_camelot": "8A",
         "key_text": "Unknown",
+        "energy": None,
         "confidence": {"bpm": 0.0, "key": 0.0},
         "source": "hybrid",
         "details": {
@@ -148,3 +150,22 @@ async def stream_job(job_id: str):
     if not job:
         raise HTTPException(status_code=404, detail="job not found")
     return StreamingResponse(job_manager.stream(job_id), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
+
+
+@router.get("/setlists", response_model=SetListsResponse)
+async def get_setlists():
+    return {"ok": True, "setlists": list_setlists()}
+
+
+@router.post("/setlists", response_model=SetListResponse)
+async def save_setlist(payload: SetListPayload):
+    saved = upsert_setlist(payload.dict())
+    return {"ok": True, "setlist": saved}
+
+
+@router.delete("/setlists/{set_id}")
+async def remove_setlist(set_id: str):
+    removed = delete_setlist(set_id)
+    if not removed:
+        raise HTTPException(status_code=404, detail="setlist not found")
+    return {"ok": True}

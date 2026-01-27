@@ -3,6 +3,8 @@ import { Track, TransitionAnalysis, SetType, BridgeRecommendation } from '../typ
 import { getGenreCategory } from '../services/trackService';
 import { analyzeTrackIssues, StrictnessLevel, calculateHarmonicStatus, parseKey, toCamelotKey } from '../services/analysisService';
 import { calculateCueStrategy, calculateTotalSetDuration } from '../services/cueService';
+import { getMetricDisplay } from '../services/metricDisplay';
+import { formatHeatMeta } from '../services/heatMeta';
 import { getSmartBridgeRecommendation } from '../services/geminiService';
 import { X, Disc, Activity, Music2, GripVertical, AlertTriangle, Scissors, AudioLines, SlidersHorizontal, Sparkles, Loader2, Zap, Flame, Waves, Minus, TrendingUp, TrendingDown, Tag, Layers, Link, ArrowRightLeft, CheckCircle2, AlertOctagon, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Target, Timer, Hourglass, Rabbit, Turtle, Wand2, Lightbulb } from 'lucide-react';
 
@@ -101,7 +103,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
   };
 
   // --- Drag & Drop Handlers (拖拽处理) ---
-  const handleDragStart = (index: number) => {
+  const handleDragStart = (event: React.DragEvent<HTMLDivElement>, index: number, track: Track) => {
+    const transferId = track.sourceId || track.id;
+    event.dataTransfer.setData('text/plain', transferId);
+    event.dataTransfer.setData('application/x-track-id', transferId);
+    event.dataTransfer.effectAllowed = 'move';
     setDraggedIndex(index);
   };
 
@@ -307,11 +313,27 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                  if (r >= 4) return { text: 'text-cyan-400', fill: '' }; // Standard
                  return { text: 'text-slate-600', fill: '' }; // Deep/Low
             };
-            
-            const resStyle = getResonanceColor(track.resonance);
-            const isLowResonance = track.resonance < 3; 
-            const isHighEnergy = track.energy > 7;
-            const isLowEnergy = track.energy < 4;
+
+            const energyDisplay = getMetricDisplay({
+                status: track.status ?? 'ok',
+                value: track.energy,
+                error: track.error ?? null
+            });
+            const resonanceDisplay = getMetricDisplay({
+                status: track.heatStatus ?? 'ok',
+                value: track.resonance,
+                error: track.heatError ?? null
+            });
+            const heatMetaLabel = formatHeatMeta({ heatSource: track.heatSource, heatScoreRaw: track.heatScoreRaw });
+            const hasHeatMeta = Boolean(track.heatSource) || (typeof track.heatScoreRaw === 'number' && Number.isFinite(track.heatScoreRaw));
+            const heatReady = resonanceDisplay.state === 'ok';
+            const resonanceValue = resonanceDisplay.value ?? 5;
+            const resStyle = heatReady ? getResonanceColor(resonanceValue) : { text: 'text-slate-500', fill: '' };
+            const isLowResonance = heatReady ? resonanceValue < 3 : false; 
+            const energyReady = energyDisplay.state === 'ok';
+            const energyValue = energyDisplay.value ?? 5;
+            const isHighEnergy = energyReady ? energyValue > 7 : false;
+            const isLowEnergy = energyReady ? energyValue < 4 : false;
 
             // --- Connector Badges (连接线徽章) ---
             let harmonicBadge = null;
@@ -370,7 +392,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                 key={`${track.id}-${index}`} 
                 className={`relative group transition-all duration-300 ${containerStyle}`}
                 draggable
-                onDragStart={() => handleDragStart(index)}
+                onDragStart={(e) => handleDragStart(e, index, track)}
                 onDragEnter={() => handleDragEnter(index)}
                 onDragEnd={handleDragEnd}
                 onDragOver={(e) => e.preventDefault()}
@@ -408,7 +430,11 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                         <span className="font-mono text-xs">{index + 1}</span>
                       </div>
 
-                      <img src={track.coverUrl} alt="cover" className="w-12 h-12 rounded bg-slate-700 object-cover pointer-events-none" />
+                      <img
+                        src={track.coverUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="%2320283a"/></svg>'}
+                        alt="cover"
+                        className="w-12 h-12 rounded bg-slate-700 object-cover pointer-events-none"
+                      />
 
                       <div className="flex-1 min-w-0 pointer-events-none select-none flex flex-col gap-1">
                         
@@ -473,7 +499,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                                     isLowEnergy ? 'text-cyan-400' : 'text-slate-300'
                                 }`}>
                                     <Zap className={`w-3 h-3 ${isHighEnergy ? 'fill-yellow-500/20' : ''}`} />
-                                    <span>{track.energy}</span>
+                                    <span>{energyDisplay.state === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : energyDisplay.label}</span>
                                 </div>
                                 
                                 <span className="text-slate-700/50">|</span>
@@ -481,7 +507,9 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                                 {/* Resonance (Dynamic Color) */}
                                 <div className={`flex items-center gap-1 ${resStyle.text}`}>
                                     <Flame className={`w-3 h-3 ${resStyle.fill}`} />
-                                    <span>{track.resonance}</span>
+                                    <span title={(resonanceDisplay.reason || '共鸣') + (hasHeatMeta ? ` | ${heatMetaLabel}` : '')}>
+                                        {resonanceDisplay.state === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : resonanceDisplay.label}
+                                    </span>
                                 </div>
                           </div>
                           

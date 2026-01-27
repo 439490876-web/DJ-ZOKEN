@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Track } from '../types'
+import { SetList, Track } from '../types'
 import {
   ExportPayload,
   ExportTarget,
@@ -11,37 +11,82 @@ interface ExportDialogProps {
   open: boolean
   onClose: () => void
   onConfirm: (payload: ExportPayload) => void
-  tracks: Track[]
+  currentTracks: Track[]
+  savedSets: SetList[]
   defaultSetName: string
+  resolveFilePath?: (track: Track) => string | null
+  submitting?: boolean
+  error?: string | null
+  success?: string | null
+  canExport?: boolean
 }
 
 export const ExportDialog: React.FC<ExportDialogProps> = ({
   open,
   onClose,
   onConfirm,
-  tracks,
+  currentTracks,
+  savedSets,
   defaultSetName,
+  resolveFilePath,
+  submitting = false,
+  error = null,
+  success = null,
+  canExport = true,
 }) => {
+  const [sourceType, setSourceType] = useState<'current' | 'saved'>('current')
+  const [selectedSetId, setSelectedSetId] = useState('')
   const [target, setTarget] = useState<ExportTarget>('serato')
   const [setName, setSetName] = useState(defaultSetName)
 
   useEffect(() => {
     if (open) {
+      setSourceType('current')
+      setSelectedSetId('')
       setTarget('serato')
       setSetName(defaultSetName)
     }
   }, [open, defaultSetName])
 
+  const selectedSet = useMemo(
+    () => savedSets.find((item) => item.id === selectedSetId),
+    [savedSets, selectedSetId]
+  )
+  const activeTracks = useMemo(
+    () => (sourceType === 'current' ? currentTracks : selectedSet?.tracks ?? []),
+    [sourceType, currentTracks, selectedSet]
+  )
+
+  useEffect(() => {
+    if (sourceType === 'saved' && selectedSet?.name) {
+      setSetName(selectedSet.name)
+    }
+  }, [sourceType, selectedSet])
+
   const filePaths = useMemo(
-    () => tracks.map((track) => track.filePath ?? null),
-    [tracks]
+    () => activeTracks.map((track) => {
+      if (resolveFilePath) return resolveFilePath(track)
+      return track.filePath ?? null
+    }),
+    [activeTracks, resolveFilePath]
   )
   const missing = useMemo(() => getMissingFilePaths(filePaths), [filePaths])
+  const missingTracks = useMemo(() => {
+    return activeTracks.filter((track, index) => {
+      const path = filePaths[index]
+      return typeof path !== 'string' || path.trim().length == 0
+    })
+  }, [activeTracks, filePaths])
   const payload = useMemo(
     () => buildExportPayload(target, setName.trim(), filePaths),
     [target, setName, filePaths]
   )
-  const canConfirm = payload.filePaths.length > 0 && setName.trim().length > 0
+  const hasSelectedSet = sourceType === 'current' || Boolean(selectedSetId)
+  const canConfirm = canExport
+    && !submitting
+    && payload.filePaths.length > 0
+    && setName.trim().length > 0
+    && hasSelectedSet
 
   if (!open) return null
 
@@ -87,12 +132,38 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               id="export-source"
               aria-label="导出对象"
               className="w-full rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
-              value="current"
-              disabled
+              value={sourceType}
+              onChange={(event) => setSourceType(event.target.value as 'current' | 'saved')}
             >
               <option value="current">当前编排</option>
+              <option value="saved">已保存 Set</option>
             </select>
           </div>
+
+          {sourceType === 'saved' && (
+            <div>
+              <label
+                htmlFor="export-saved-set"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-400"
+              >
+                选择已保存 Set
+              </label>
+              <select
+                id="export-saved-set"
+                aria-label="已保存 Set"
+                className="w-full rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
+                value={selectedSetId}
+                onChange={(event) => setSelectedSetId(event.target.value)}
+              >
+                <option value="">请选择</option>
+                {savedSets.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name || '未命名 Set'} · {item.tracks?.length ?? 0} 首 · {item.totalDuration || '00:00'}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <fieldset className="space-y-2">
             <legend className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -126,9 +197,45 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             导出位置：将自动检测目标软件目录
           </div>
 
-          {missing.length > 0 && (
+          <div className="rounded-md border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-400">
+            将导出 {payload.filePaths.length} 首 / 共 {activeTracks.length} 首
+          </div>
+
+          {!hasSelectedSet && sourceType === 'saved' && (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-              缺少 {missing.length} 首文件路径
+              请先选择要导出的 Set
+            </div>
+          )}
+
+          {missing.length > 0 && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 space-y-1">
+              <div>缺少 {missing.length} 首文件路径</div>
+              <div className="text-[10px] text-amber-100/90">
+                {missingTracks.slice(0, 5).map((track) => (
+                  <div key={track.id}>• {track.title} — {track.artist}</div>
+                ))}
+                {missingTracks.length > 5 && (
+                  <div>… 还有 {missingTracks.length - 5} 首未显示</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!canExport && (
+            <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              当前环境未检测到桌面端导出能力
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200">
+              导出失败：{error}
+            </div>
+          )}
+
+          {success && (
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              导出成功：{success}
             </div>
           )}
         </div>
@@ -145,7 +252,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             disabled={!canConfirm}
             className="rounded-md bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            确认导出
+            {submitting ? "导出中..." : "确认导出"}
           </button>
         </div>
       </div>

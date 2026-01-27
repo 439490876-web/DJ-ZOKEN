@@ -4,9 +4,9 @@
   "version": "0.1.0",
   "main": "src/main.js",
   "scripts": {
-    "dev": "ELECTRON_RENDERER_URL=http://localhost:3004 electron .",
+    "dev": "env -u ELECTRON_RUN_AS_NODE ELECTRON_RENDERER_URL=http://localhost:3004 electron .",
     "build": "tsc -p tsconfig.json",
-    "start": "electron ."
+    "start": "env -u ELECTRON_RUN_AS_NODE electron ."
   },
   "devDependencies": {
     "electron": "^32.3.3",

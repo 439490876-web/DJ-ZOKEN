@@ -16,6 +16,7 @@ const createWindow = () => {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
+      sandbox: false,
     },
   })
 
@@ -36,7 +37,7 @@ ipcMain.handle(
       if (!dbPath) {
         return { ok: false, message: 'Missing REKORDBOX_DB_PATH' }
       }
-      exportToRekordbox({
+      await exportToRekordbox({
         dbPath,
         setName: payload.setName,
         filePaths: payload.filePaths,
@@ -48,12 +49,12 @@ ipcMain.handle(
     if (!seratoDir) {
       return { ok: false, message: 'Missing SERATO_DIR' }
     }
-    exportToSerato({
+    const result = await exportToSerato({
       seratoDir,
       setName: payload.setName,
       filePaths: payload.filePaths,
     })
-    return { ok: true, message: 'serato export ok' }
+    return { ok: true, message: 'serato export ok', cratePath: result?.cratePath }
   })
 )
 
