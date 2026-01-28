@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getHeatApiBase, buildIdentifyEndpoints, shouldRetryWithProxy } from '../services/heatApi';
+import { getHeatApiBase, buildIdentifyEndpoints, shouldRetryWithProxy, buildHeatCacheKey } from '../services/heatApi';
 
 describe('getHeatApiBase', () => {
   it('uses default 127.0.0.1:8002 when env missing', () => {
@@ -27,5 +27,15 @@ describe('shouldRetryWithProxy', () => {
 
   it('returns false for other errors', () => {
     expect(shouldRetryWithProxy(new Error('boom'))).toBe(false);
+  });
+});
+
+
+describe('buildHeatCacheKey', () => {
+  it('includes model version in key', () => {
+    const fakeFile = { name: 'song.mp3', size: 1234, lastModified: 1700000000000 } as File;
+    const key = buildHeatCacheKey(fakeFile);
+    expect(key).toContain('song.mp3:1234:1700000000000');
+    expect(key).toContain('heat=v4-popcomment');
   });
 });

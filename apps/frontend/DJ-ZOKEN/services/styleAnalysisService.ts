@@ -1,3 +1,5 @@
+import { buildStyleEndpoint, getStyleApiBase } from './styleApi';
+
 export interface StylePrediction {
   style?: string;
   prob?: number;
@@ -29,25 +31,8 @@ interface StyleAnalysisResponse {
   debug?: StyleDebugPayload;
 }
 
-const resolveApiBase = (value: string): string => {
-  const trimmed = (value || '').trim();
-  if (!trimmed || typeof window === 'undefined') return trimmed;
-  try {
-    const url = new URL(trimmed);
-    const host = window.location.hostname;
-    const normalizedHost = host === 'localhost' ? '127.0.0.1' : host;
-    const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
-    if (normalizedHost && isLocal) {
-      url.hostname = normalizedHost;
-    }
-    return url.toString().replace(/\/$/, '');
-  } catch {
-    return trimmed;
-  }
-};
-const styleApiBase = resolveApiBase((import.meta as any).env?.VITE_STYLE_API || 'http://localhost:8000');
-const buildStyleEndpoint = () =>
-  `${styleApiBase}/predict?segment_mode=drop&drop_strategy=energy&drop_seconds=20&drop_candidate_top_n=2`;
+const styleApiBase = getStyleApiBase((import.meta as any).env?.VITE_STYLE_API);
+const styleEndpoint = buildStyleEndpoint(styleApiBase);
 
 const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number, signal?: AbortSignal) => {
   const controller = new AbortController();
@@ -294,7 +279,7 @@ const runStyleAnalysis = async (file: File, options?: StyleAnalysisOptions, sign
   const form = new FormData();
   form.append('file', preparedFile);
   form.append('original_name', file.name);
-  const endpoint = buildStyleEndpoint();
+  const endpoint = styleEndpoint;
   const pageUrl = typeof window !== 'undefined' ? window.location.href : '';
   const resolvedFetchUrl = typeof window !== 'undefined' ? new URL(endpoint, pageUrl) : new URL(endpoint);
   if (options?.debug) {

@@ -1,4 +1,6 @@
-import { beforeEach, afterEach, describe, it, expect } from 'vitest'
+/* @vitest-environment jsdom */
+import '@testing-library/jest-dom/vitest'
+import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import App from '../App'
 
@@ -16,6 +18,16 @@ const cachedTrack = {
 }
 
 beforeEach(() => {
+  vi.stubGlobal('fetch', vi.fn(async (input) => {
+    if (typeof input === 'string' && input.startsWith('/api/setlists')) {
+      return {
+        ok: true,
+        json: async () => ({ ok: true, setlists: [] }),
+      }
+    }
+    return { ok: true, json: async () => ({}) }
+  }))
+
   window.localStorage.setItem(
     'dj_library_cache_v1',
     JSON.stringify({
@@ -27,6 +39,7 @@ beforeEach(() => {
 
 afterEach(() => {
   window.localStorage.clear()
+  vi.unstubAllGlobals()
 })
 
 describe('Export button', () => {

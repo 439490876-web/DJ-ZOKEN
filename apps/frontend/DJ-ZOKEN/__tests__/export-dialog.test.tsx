@@ -1,3 +1,4 @@
+/* @vitest-environment jsdom */
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -28,7 +29,8 @@ describe('ExportDialog', () => {
         open
         onClose={onClose}
         onConfirm={onConfirm}
-        tracks={[baseTrack]}
+        currentTracks={[baseTrack]}
+        savedSets={[]}
         defaultSetName="My Set"
       />
     )
@@ -44,7 +46,30 @@ describe('ExportDialog', () => {
       target: 'rekordbox',
       setName: 'Friday Set',
       filePaths: ['/tmp/a.mp3'],
+      trackMeta: [
+        { name: 'Song A', artist: 'Artist A', album: null, bpm: 120, key: '1A' },
+      ],
     })
+  })
+
+
+  it('shows rekordbox xml path on success', () => {
+    render(
+      <ExportDialog
+        open
+        onClose={() => {}}
+        onConfirm={() => {}}
+        currentTracks={[baseTrack]}
+        savedSets={[]}
+        defaultSetName="My Set"
+        success="导出成功"
+        successPath="/tmp/test.xml"
+        successTarget="rekordbox"
+      />
+    )
+
+    expect(screen.getByText(/test\.xml/)).toBeTruthy()
+    expect(screen.getByText('Rekordbox 导入提示')).toBeTruthy()
   })
 
   it('shows missing file paths warning', () => {
@@ -59,11 +84,12 @@ describe('ExportDialog', () => {
         open
         onClose={() => {}}
         onConfirm={() => {}}
-        tracks={[baseTrack, trackMissing]}
+        currentTracks={[baseTrack, trackMissing]}
+        savedSets={[]}
         defaultSetName="My Set"
       />
     )
 
-    expect(screen.getByText('缺少 1 首文件路径')).toBeInTheDocument()
+    expect(screen.getByText('缺少 1 首文件路径')).toBeTruthy()
   })
 })

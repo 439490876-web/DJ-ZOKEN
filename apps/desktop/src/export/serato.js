@@ -9,6 +9,49 @@ const safeFilename = (name) => {
 
 const hasNullByte = (buffer) => buffer.includes(0)
 
+const encodeUtf16BE = (value) => {
+  const le = Buffer.from(value, 'utf16le')
+  for (let i = 0; i < le.length; i += 2) {
+    const tmp = le[i]
+    le[i] = le[i + 1]
+    le[i + 1] = tmp
+  }
+  return le
+}
+
+const buildSeratoTrackChunk = (filePath) => {
+  const pathBytes = encodeUtf16BE(filePath)
+  const ptrkLen = Buffer.alloc(4)
+  ptrkLen.writeUInt32BE(pathBytes.length)
+  const ptrk = Buffer.concat([Buffer.from('ptrk'), ptrkLen, pathBytes])
+  const otrkLen = Buffer.alloc(4)
+  otrkLen.writeUInt32BE(ptrk.length)
+  return Buffer.concat([Buffer.from('otrk'), otrkLen, ptrk])
+}
+
+const loadCrateHeader = async (cratesDir) => {
+  try {
+    const entries = await fs.readdir(cratesDir)
+    for (const entry of entries) {
+      if (!entry.endsWith('.crate')) continue
+      const candidate = path.join(cratesDir, entry)
+      const raw = await fs.readFile(candidate)
+      const idx = raw.indexOf(Buffer.from('otrk'))
+      if (idx > 0) {
+        return raw.slice(0, idx)
+      }
+    }
+  } catch (err) {
+    console.log('[export-serato] header-skip', { error: String(err) })
+  }
+
+  const headerText = '1.0/Serato ScratchLive Crate'
+  const headerPayload = encodeUtf16BE(headerText)
+  const vrsnLen = Buffer.alloc(4)
+  vrsnLen.writeUInt32BE(headerPayload.length)
+  return Buffer.concat([Buffer.from('vrsn'), vrsnLen, headerPayload])
+}
+
 const withTimeout = async (promise, ms, label) => {
   let timer
   const timeout = new Promise((_, reject) => {
@@ -35,11 +78,14 @@ const exportToSerato = async ({ seratoDir, setName, filePaths }) => {
 
   const crateName = safeFilename(setName)
   const cratePath = path.join(cratesDir, `${crateName}.crate`)
-  const crateLines = ['Serato ScratchLive Crate', `NAME:${crateName}`]
+  const header = await loadCrateHeader(cratesDir)
+  const trackChunks = []
   for (const filePath of filePaths) {
-    crateLines.push(`PATH:${filePath}`)
+    if (!filePath) continue
+    trackChunks.push(buildSeratoTrackChunk(filePath))
   }
-  await withTimeout(fs.writeFile(cratePath, crateLines.join('\n')), 5000, 'write:crate')
+  const crateBody = Buffer.concat([header, ...trackChunks])
+  await withTimeout(fs.writeFile(cratePath, crateBody), 5000, 'write:crate')
 
   const backupDir = path.join(seratoDir, 'backup')
   const dbCandidates = ['database', 'database V2']

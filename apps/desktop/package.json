@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "env -u ELECTRON_RUN_AS_NODE ELECTRON_RENDERER_URL=http://localhost:3004 electron .",
     "build": "tsc -p tsconfig.json",
-    "start": "env -u ELECTRON_RUN_AS_NODE electron ."
+    "start": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "test": "node --test"
   },
   "devDependencies": {
     "electron": "^32.3.3",

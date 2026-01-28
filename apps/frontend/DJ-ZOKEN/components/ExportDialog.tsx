@@ -18,6 +18,8 @@ interface ExportDialogProps {
   submitting?: boolean
   error?: string | null
   success?: string | null
+  successPath?: string | null
+  successTarget?: ExportTarget | null
   canExport?: boolean
 }
 
@@ -32,6 +34,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   submitting = false,
   error = null,
   success = null,
+  successPath = null,
+  successTarget = null,
   canExport = true,
 }) => {
   const [sourceType, setSourceType] = useState<'current' | 'saved'>('current')
@@ -78,8 +82,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
     })
   }, [activeTracks, filePaths])
   const payload = useMemo(
-    () => buildExportPayload(target, setName.trim(), filePaths),
-    [target, setName, filePaths]
+    () => buildExportPayload(target, setName.trim(), filePaths, activeTracks),
+    [target, setName, filePaths, activeTracks]
   )
   const hasSelectedSet = sourceType === 'current' || Boolean(selectedSetId)
   const canConfirm = canExport
@@ -194,7 +198,9 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           </fieldset>
 
           <div className="rounded-md border border-slate-800 bg-slate-950/50 p-3 text-xs text-slate-400">
-            导出位置：将自动检测目标软件目录
+            {target === 'rekordbox'
+              ? 'Rekordbox 将更新固定的 ZOKEN SETGPT.xml（导入一次后可刷新，曲库用于索引）'
+              : '导出位置：将自动检测目标软件目录'}
           </div>
 
           <div className="rounded-md border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-400">
@@ -236,6 +242,15 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
           {success && (
             <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
               导出成功：{success}
+            </div>
+          )}
+
+          {successTarget === 'rekordbox' && successPath && (
+            <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 px-3 py-2 text-xs text-emerald-100 space-y-1">
+              <div className="font-semibold">Rekordbox 导入提示</div>
+              <div>1. 打开 Rekordbox</div>
+              <div>2. File → Import → Rekordbox XML</div>
+              <div className="text-[10px] text-emerald-100/80 break-all">XML: {successPath}</div>
             </div>
           )}
         </div>

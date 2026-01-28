@@ -5,16 +5,19 @@ import { trackService, getGenreCategory } from './services/trackService';
 import { analyzeTransitionAi, getAiSuggestions } from './services/geminiService';
 import { analyzeSet, toCamelotKey } from './services/analysisService';
 import { analyzeStyle, cancelAllStyleTasks, cancelStyleTask } from './services/styleAnalysisService';
-import { buildIdentifyEndpoints, getHeatApiBase, shouldRetryWithProxy } from './services/heatApi';
+import { HEAT_MODEL_VERSION, buildIdentifyEndpoints, getHeatApiBase, shouldRetryWithProxy, buildHeatCacheKey } from './services/heatApi';
 import { formatHeatMeta } from './services/heatMeta';
+import { getHeatRefreshIds } from './services/heatRefresh';
 import { ExportPayload } from './services/exportService';
 import { calculateTotalSetDuration, formatSecondsToDuration } from './services/cueService';
 import { getMetricDisplay } from './services/metricDisplay';
-import { normalizePendingMetrics } from './services/trackMetrics';
+import { normalizeHeatSource, normalizePendingMetrics } from './services/trackMetrics';
 import { attachFilePath, getFilePath } from './services/filePath';
 import EnergyChart from './components/EnergyChart';
 import { SetBuilder } from './components/SetBuilder';
 import { ExportDialog } from './components/ExportDialog';
+import { ResetConfirmDialog } from './components/ResetConfirmDialog';
+import { SavedSetLibrary } from './components/SavedSetLibrary';
 import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye, Pencil, FolderPlus, Folder, Trash2, ListOrdered, ArrowUpRight } from 'lucide-react';
 
 type SortKey = 'bpm' | 'key' | 'energy' | 'resonance' | 'import';
@@ -47,6 +50,7 @@ const App: React.FC = () => {
   const [isHeatRefreshing, setIsHeatRefreshing] = useState(false);
   const exportAvailable = typeof window !== 'undefined'
     && typeof (window as any)?.electronAPI?.exportSet === 'function';
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
   
   // 专注模式 (Focus Mode)
   const [isFocusMode, setIsFocusMode] = useState<boolean>(false);
@@ -223,6 +227,8 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
+  const [exportSuccessPath, setExportSuccessPath] = useState<string | null>(null);
+  const [exportSuccessTarget, setExportSuccessTarget] = useState<ExportTarget | null>(null);
   const [isSetDirty, setIsSetDirty] = useState(false);
   const suppressSetDirtyRef = useRef(false);
   const hasInitSetDirtyRef = useRef(false);
@@ -343,6 +349,7 @@ const App: React.FC = () => {
     queue: []
   });
   const identifyCacheRef = useRef<Map<string, { heatScore?: number | null; heatScoreRaw?: number | null; heatSource?: string | null; errorMessage?: string | null }>>(new Map());
+  const autoHeatRefreshRef = useRef(false);
 
   const fetchWithTimeout = async (url: string, options: RequestInit, timeoutMs: number) => {
     const controller = new AbortController();
@@ -402,24 +409,25 @@ const App: React.FC = () => {
               cachedLibrary = parsed.library.map(track => {
                 const next = { ...track };
                 const sanitized = normalizePendingMetrics(next);
+                const heatNormalized = normalizeHeatSource(sanitized, HEAT_MODEL_VERSION);
 
-                if (sanitized?.coverUrl && String(sanitized.coverUrl).startsWith('blob:')) {
-                  sanitized.coverUrl = null;
+                if (heatNormalized?.coverUrl && String(heatNormalized.coverUrl).startsWith('blob:')) {
+                  heatNormalized.coverUrl = null;
                 }
                 const hasAnalysis =
-                  typeof sanitized.bpm === 'number' ||
-                  Boolean(sanitized.key) ||
-                  typeof sanitized.energy === 'number' ||
-                  Boolean(sanitized.genre) ||
-                  typeof sanitized.resonance === 'number' ||
-                  (Array.isArray(sanitized.analysisWarnings) && sanitized.analysisWarnings.length > 0);
-                if ((!sanitized.status || sanitized.status === 'pending') && hasAnalysis) {
-                  sanitized.status = 'ok';
+                  typeof heatNormalized.bpm === 'number' ||
+                  Boolean(heatNormalized.key) ||
+                  typeof heatNormalized.energy === 'number' ||
+                  Boolean(heatNormalized.genre) ||
+                  typeof heatNormalized.resonance === 'number' ||
+                  (Array.isArray(heatNormalized.analysisWarnings) && heatNormalized.analysisWarnings.length > 0);
+                if ((!heatNormalized.status || heatNormalized.status === 'pending') && hasAnalysis) {
+                  heatNormalized.status = 'ok';
                 }
-                if ((!sanitized.heatStatus || sanitized.heatStatus === 'pending') && typeof sanitized.resonance === 'number') {
-                  sanitized.heatStatus = 'ok';
+                if ((!heatNormalized.heatStatus || heatNormalized.heatStatus === 'pending') && typeof heatNormalized.resonance === 'number') {
+                  heatNormalized.heatStatus = 'ok';
                 }
-                return sanitized;
+                return heatNormalized;
               });
             }
             if (Array.isArray(parsed?.libraryOrder)) cachedOrder = parsed.libraryOrder;
@@ -445,7 +453,8 @@ const App: React.FC = () => {
                 next.heatStatus = 'ok';
               }
             }
-            return normalizePendingMetrics(next);
+            const pending = normalizePendingMetrics(next);
+            return normalizeHeatSource(pending, HEAT_MODEL_VERSION);
           }));
           setLibrary(enriched);
           setLibraryOrder(cachedOrder.length > 0 ? cachedOrder : enriched.map(track => track.id));
@@ -457,7 +466,9 @@ const App: React.FC = () => {
           const seen = new Set(merged.map(track => track.id));
           for (const track of data) {
             if (!seen.has(track.id)) {
-              merged.push(track);
+              const pending = normalizePendingMetrics({ ...track });
+              const normalized = normalizeHeatSource(pending, HEAT_MODEL_VERSION);
+              merged.push(normalized);
               seen.add(track.id);
             }
           }
@@ -486,10 +497,10 @@ const App: React.FC = () => {
         const next = { ...track };
         const sanitized = normalizePendingMetrics(next);
 
-        if (sanitized.coverUrl) {
-          sanitized.coverUrl = null;
+        if (heatNormalized.coverUrl) {
+          heatNormalized.coverUrl = null;
         }
-        return sanitized;
+        return heatNormalized;
       });
       const payload = JSON.stringify({
         library: sanitizedLibrary,
@@ -1018,6 +1029,36 @@ const App: React.FC = () => {
     }
     setIsHeatRefreshing(false);
   };
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (autoHeatRefreshRef.current) return;
+    const candidates = getHeatRefreshIds(library, localFileMap, HEAT_MODEL_VERSION);
+    if (candidates.length == 0) {
+      autoHeatRefreshRef.current = true;
+      return;
+    }
+    autoHeatRefreshRef.current = true;
+    candidates.forEach((trackId) => {
+      const file = localFileMap[trackId];
+      if (!file) return;
+      updateTrackById(trackId, { heatStatus: 'pending', heatError: null });
+      enqueueIdentify(() => identifyLocalFile(file), 1)
+        .then((result) => {
+          applyHeatUpdate(
+            trackId,
+            result?.heatScoreRaw ?? null,
+            result?.heatScore ?? null,
+            result?.heatSource ?? null,
+            result?.errorMessage ?? null
+          );
+        })
+        .catch((e) => {
+          applyHeatUpdate(trackId, null, null, null, normalizeErrorMessage(String(e)) || 'identify failed');
+        });
+    });
+  }, [isLoading, library, localFileMap]);
+
 
   const clearIndexedDB = async () => {
     if (typeof indexedDB === 'undefined') return { ok: false, reason: 'unavailable' as const };
@@ -1557,7 +1598,7 @@ const App: React.FC = () => {
         return null;
       });
 
-      const identifyCacheKey = buildFileCacheKey(file);
+      const identifyCacheKey = buildHeatCacheKey(file);
       const cachedIdentify = identifyCacheRef.current.get(identifyCacheKey) || null;
       const identifyPromise = (cachedIdentify
         ? Promise.resolve(cachedIdentify)
@@ -1679,6 +1720,8 @@ const App: React.FC = () => {
       setExportError(null);
     }
     setExportSuccess(null);
+    setExportSuccessPath(null);
+    setExportSuccessTarget(null);
     setIsExportOpen(true);
   };
 
@@ -1695,8 +1738,10 @@ const App: React.FC = () => {
     try {
       const result = await (window as any).electronAPI.exportSet(payload);
       if (result?.ok) {
-        const exportPath = result?.cratePath || result?.playlistName || result?.message || payload.target;
+        const exportPath = result?.xmlPath || result?.cratePath || result?.playlistName || result?.message || payload.target;
         setExportSuccess(exportPath || payload.target);
+        setExportSuccessPath(result?.xmlPath || null);
+        setExportSuccessTarget(payload.target);
         setImportStatus(`导出成功：${exportPath}`);
         window.setTimeout(() => setImportStatus(null), 4000);
       } else {
@@ -2499,65 +2544,15 @@ const App: React.FC = () => {
                     {isSetDirty || !isCurrentSetSaved ? '未保存' : '已保存'}
                 </span>
             </div>
-            <div className="bg-slate-900/60 border border-slate-800/60 rounded-lg p-2">
-                <div className="text-[10px] text-slate-400 uppercase tracking-wider mb-2">已保存 Set 库</div>
-                <div className="max-h-32 overflow-y-auto custom-scrollbar space-y-1">
-                    {savedSetDisplayList.map((setList, index) => {
-                        const isCurrent = setList.id === currentSetId;
-                        return (
-                            <button
-                                key={`${setList.id}-${index}`}
-                                onClick={() => handleLoadSet(setList)}
-                                disabled={isCurrent}
-                                className={`w-full text-left px-2 py-2 rounded-md border transition-colors ${
-                                    isCurrent
-                                    ? 'bg-gradient-to-r from-indigo-500/30 to-sky-500/20 border-indigo-400/40 text-white'
-                                    : 'bg-slate-900/40 border-slate-800/60 text-slate-300 hover:bg-slate-800/70 hover:text-white'
-                                }`}
-                            >
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="text-[12px] font-semibold truncate">{setList.name}</div>
-                                    <div className="flex items-center gap-1">
-                                        <span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
-                                            isCurrent ? 'border-indigo-300/40 text-indigo-200' : 'border-slate-700 text-slate-400'
-                                        }`}>
-                                            {isCurrent ? '当前' : setList.type}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                void handleRenameSet(setList);
-                                            }}
-                                            className="p-1 rounded hover:bg-slate-700/60 text-slate-400 hover:text-white"
-                                            title="重命名"
-                                        >
-                                            <Pencil className="w-3 h-3" />
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                void handleDeleteSet(setList);
-                                            }}
-                                            className="p-1 rounded hover:bg-rose-500/20 text-slate-400 hover:text-rose-200"
-                                            title="删除"
-                                        >
-                                            <Trash2 className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="text-[10px] text-slate-400 mt-1 flex items-center justify-between">
-                                    <span>{setList.tracks?.length ?? 0} 首 · {setList.totalDuration || '00:00'}</span>
-                                    {isCurrent && (isSetDirty || !isCurrentSetSaved) && (
-                                        <span className="text-amber-400">未保存</span>
-                                    )}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
+            <SavedSetLibrary
+                savedSets={savedSetDisplayList}
+                currentSetId={currentSetId}
+                isSetDirty={isSetDirty}
+                isCurrentSetSaved={isCurrentSetSaved}
+                onLoadSet={handleLoadSet}
+                onRenameSet={(setList) => { void handleRenameSet(setList); }}
+                onDeleteSet={(setList) => { void handleDeleteSet(setList); }}
+            />
         </div>
 
         <div className="flex-1 p-6 overflow-hidden flex flex-col">
@@ -2579,13 +2574,14 @@ const App: React.FC = () => {
         {/* Set 操作区 (重置/保存/导出) */}
         <div className="p-4 border-t border-slate-800/50 bg-slate-900/50 flex gap-3">
           <button 
-            onClick={() => setSetTracks([])}
+            onClick={() => setShowResetConfirm(true)}
             className="flex-1 py-3 rounded-lg border border-slate-700 text-slate-400 hover:text-white hover:bg-slate-800 flex items-center justify-center gap-2 text-sm transition-colors"
           >
             <RotateCcw className="w-4 h-4" /> 重置
           </button>
           <button
             onClick={handleOpenExport}
+            disabled={setTracks.length === 0}
             className="flex-1 py-3 rounded-lg border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800 flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowUpRight className="w-4 h-4" /> 导出
@@ -2935,11 +2931,22 @@ const App: React.FC = () => {
         </div>
       )}
 
+      <ResetConfirmDialog
+        open={showResetConfirm}
+        onCancel={() => setShowResetConfirm(false)}
+        onConfirm={() => {
+          setSetTracks([]);
+          setShowResetConfirm(false);
+        }}
+      />
+
       <ExportDialog
         open={isExportOpen}
         onClose={() => {
           setIsExportOpen(false);
           setExportSuccess(null);
+          setExportSuccessPath(null);
+          setExportSuccessTarget(null);
         }}
         onConfirm={handleConfirmExport}
         currentTracks={setTracks}
@@ -2953,6 +2960,8 @@ const App: React.FC = () => {
         submitting={isExporting}
         error={exportError}
         success={exportSuccess}
+        successPath={exportSuccessPath}
+        successTarget={exportSuccessTarget}
         canExport={exportAvailable}
       />
 

@@ -36,16 +36,12 @@ ipcMain.handle(
   'export:set',
   createExportHandler(async (payload) => {
     if (payload.target === 'rekordbox') {
-      const dbPath = process.env.REKORDBOX_DB_PATH
-      if (!dbPath) {
-        return { ok: false, message: 'Missing REKORDBOX_DB_PATH' }
-      }
-      await exportToRekordbox({
-        dbPath,
+      const result = await exportToRekordbox({
         setName: payload.setName,
         filePaths: payload.filePaths,
+        trackMeta: payload.trackMeta || [],
       })
-      return { ok: true, message: 'rekordbox export ok' }
+      return { ok: true, message: 'rekordbox export ok', xmlPath: result.xmlPath }
     }
 
     const seratoDir = process.env.SERATO_DIR
