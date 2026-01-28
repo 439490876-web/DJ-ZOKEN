@@ -39,3 +39,6 @@ outputs/
 apps/backend/bpmkey_backend/backend/.venv/
 # Backup files
 *.bak
+
+# Runtime DB (local)
+apps/backend/PyLyrics-Extractor/app/data.db
