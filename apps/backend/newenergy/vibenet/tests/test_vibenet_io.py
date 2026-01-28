@@ -9,7 +9,7 @@ def _get_lossless_test_audio_file(ext: str) -> str:
 	"""
 	Gets the test_lossless_audio file with the specified extension.
 	"""
-	fixtures = Path("tests/data_fixtures/audio")
+	fixtures = Path(__file__).resolve().parent / "data_fixtures" / "audio"
 	file_path = fixtures / f"test_lossless_audio{ext}"
 	if not file_path.exists():
 		pytest.fail(f"Required test file not found: {file_path}")

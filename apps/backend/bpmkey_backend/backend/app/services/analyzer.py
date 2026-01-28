@@ -8,6 +8,7 @@ from typing import Callable, Dict, Optional
 
 from ..utils.audio_io import get_duration_sec
 from .bpm_utils import correct_bpm_for_dj, format_bpm
+from .energy import predict_energy
 from .essentia_backend import analyze as essentia_analyze, is_available as essentia_available
 from .key_utils import parse_key_tag
 from .librosa_backend import analyze as librosa_analyze, is_available as librosa_available
@@ -110,6 +111,10 @@ def analyze_bpm_key(path: Path, filename: str, progress_cb: Optional[ProgressCal
         warnings.append("bpm_missing")
 
     duration_sec = get_duration_sec(path)
+    progress("energy", 0.92)
+    energy_result = predict_energy(path)
+    if energy_result.warning:
+        warnings.append(energy_result.warning)
     bpm_display = format_bpm(bpm) if bpm is not None else "0.0"
 
     if bpm_source == "tag" and key_source == "tag" and tag_result.vendor in {"serato", "rekordbox"}:
@@ -134,6 +139,7 @@ def analyze_bpm_key(path: Path, filename: str, progress_cb: Optional[ProgressCal
         "bpm_display": bpm_display,
         "key_camelot": key_camelot,
         "key_text": key_text,
+        "energy": energy_result.value,
         "confidence": {
             "bpm": _safe_confidence(bpm_confidence),
             "key": _safe_confidence(key_confidence),
