@@ -30,6 +30,7 @@ def _build_error_track(filename: str, error: str) -> dict:
         "bpm_display": "0.0",
         "key_camelot": "8A",
         "key_text": "Unknown",
+        "energy": None,
         "confidence": {"bpm": 0.0, "key": 0.0},
         "source": "hybrid",
         "details": {

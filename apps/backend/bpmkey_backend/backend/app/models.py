@@ -25,6 +25,7 @@ class TrackResult(BaseModel):
     bpm_display: str
     key_camelot: str
     key_text: str
+    energy: Optional[float] = None
     confidence: Confidence
     source: str
     details: TrackDetails
