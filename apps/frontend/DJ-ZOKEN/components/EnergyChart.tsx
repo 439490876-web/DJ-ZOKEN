@@ -1,11 +1,239 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useState, useEffect, useRef, useId } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Customized, usePlotArea, useXAxisDomain, useYAxisDomain } from 'recharts';
 import { Track } from '../types';
 import { ZoomIn, MoveHorizontal, RotateCcw, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
 
 interface EnergyChartProps {
   tracks: Track[];
 }
+
+type HeatBand = {
+  min: number;
+  max: number;
+  from: string;
+  to: string;
+};
+
+const HEAT_BANDS: HeatBand[] = [
+  { min: 1, max: 3, from: '#0B1D3A', to: '#2EC4D6' }, // Deep Ocean Blue -> Cyan
+  { min: 4, max: 5, from: '#1F9E9A', to: '#7BC96F' }, // Teal -> Lime Green
+  { min: 6, max: 7, from: '#F4C45E', to: '#F28C3B' }, // Warm Yellow -> Orange
+  { min: 8, max: 9, from: '#E26A2C', to: '#C04B9B' }, // Deep Orange -> Magenta
+  { min: 10, max: 10, from: '#E93B2F', to: '#E23BB8' }, // Vibrant Red -> Blazing Fuchsia
+];
+
+const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+
+const hexToRgb = (hex: string) => {
+  const normalized = hex.replace('#', '').trim();
+  const full = normalized.length === 3
+    ? normalized.split('').map((c) => c + c).join('')
+    : normalized;
+  const intVal = parseInt(full, 16);
+  return {
+    r: (intVal >> 16) & 255,
+    g: (intVal >> 8) & 255,
+    b: intVal & 255,
+  };
+};
+
+const rgbToHex = (r: number, g: number, b: number) => {
+  const toHex = (v: number) => v.toString(16).padStart(2, '0');
+  return `#${toHex(clamp(Math.round(r), 0, 255))}${toHex(clamp(Math.round(g), 0, 255))}${toHex(clamp(Math.round(b), 0, 255))}`;
+};
+
+const mixHex = (from: string, to: string, t: number) => {
+  const a = hexToRgb(from);
+  const b = hexToRgb(to);
+  const k = clamp(t, 0, 1);
+  return rgbToHex(a.r + (b.r - a.r) * k, a.g + (b.g - a.g) * k, a.b + (b.b - a.b) * k);
+};
+
+const getHeatBand = (value: number) => {
+  return HEAT_BANDS.find((band) => value >= band.min && value <= band.max) || HEAT_BANDS[HEAT_BANDS.length - 1];
+};
+
+const getHeatColor = (value?: number, heatStatus?: string) => {
+  if (heatStatus !== 'ok' || typeof value !== 'number' || Number.isNaN(value)) {
+    return '#A59AA6';
+  }
+  const clamped = clamp(value, 1, 10);
+  const band = getHeatBand(clamped);
+  const range = Math.max(1, band.max - band.min);
+  const t = range === 0 ? 1 : (clamped - band.min) / range;
+  return mixHex(band.from, band.to, t);
+};
+
+type ChartPoint = {
+  x: number;
+  y: number;
+  energy: number;
+  resonance?: number;
+  heatStatus?: string;
+};
+
+type Segment = {
+  d: string;
+  fillD: string;
+  startColor: string;
+  endColor: string;
+};
+
+const getSegmentControls = (p0: ChartPoint, p1: ChartPoint, p2: ChartPoint, p3: ChartPoint) => {
+  const smoothing = 1;
+  const c1x = p1.x + (p2.x - p0.x) / 6 * smoothing;
+  const c1y = p1.y + (p2.y - p0.y) / 6 * smoothing;
+  const c2x = p2.x - (p3.x - p1.x) / 6 * smoothing;
+  const c2y = p2.y - (p3.y - p1.y) / 6 * smoothing;
+  const minY = Math.min(p1.y, p2.y);
+  const maxY = Math.max(p1.y, p2.y);
+  return {
+    c1: { x: c1x, y: clamp(c1y, minY, maxY) },
+    c2: { x: c2x, y: clamp(c2y, minY, maxY) },
+  };
+};
+
+const SegmentedEnergyCurve: React.FC<any> = ({ data }) => {
+  const id = useId().replace(/:/g, '');
+  const plotArea = usePlotArea();
+  const xDomain = useXAxisDomain();
+  const yDomain = useYAxisDomain();
+
+  if (!plotArea) return null;
+
+  if (!data || data.length < 2) return null;
+
+  const resolvedXDomain = (Array.isArray(xDomain) && xDomain.length === 2)
+    ? (xDomain as number[])
+    : [data[0].originalIndex, data[data.length - 1].originalIndex];
+  const resolvedYDomain = (Array.isArray(yDomain) && yDomain.length === 2)
+    ? (yDomain as number[])
+    : [0, 12];
+
+  const xMin = resolvedXDomain[0] ?? data[0].originalIndex;
+  const xMax = resolvedXDomain[1] ?? data[data.length - 1].originalIndex;
+  const yMin = resolvedYDomain[0] ?? 0;
+  const yMax = resolvedYDomain[1] ?? 12;
+  const xSpan = Math.max(1, xMax - xMin);
+  const ySpan = Math.max(1, yMax - yMin);
+
+  const xScale = (value: number) => plotArea.x + ((value - xMin) / xSpan) * plotArea.width;
+  const yScale = (value: number) => plotArea.y + ((yMax - value) / ySpan) * plotArea.height;
+
+  const points: ChartPoint[] = data.map((entry: any) => ({
+    x: xScale(entry.originalIndex),
+    y: yScale(entry.energy),
+    energy: entry.energy,
+    resonance: entry.resonance,
+    heatStatus: entry.heatStatus,
+  }));
+
+  const baseY = yScale(0);
+
+  const segments: Segment[] = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = points[i - 1] || points[i];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = points[i + 2] || points[i + 1];
+    const { c1, c2 } = getSegmentControls(p0, p1, p2, p3);
+    const d = `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+    const fillD = `${d} L ${p2.x} ${baseY} L ${p1.x} ${baseY} Z`;
+    segments.push({
+      d,
+      fillD,
+      startColor: getHeatColor(p1.resonance, p1.heatStatus),
+      endColor: getHeatColor(p2.resonance, p2.heatStatus),
+    });
+  }
+
+  const peaks = points.filter((point, index) => {
+    if (index === 0 || index === points.length - 1) return false;
+    const prev = points[index - 1].energy;
+    const next = points[index + 1].energy;
+    return point.energy > prev && point.energy >= next;
+  });
+
+  return (
+    <>
+      <defs>
+        <clipPath id={`${id}-clip`}>
+          <rect x={plotArea.x} y={plotArea.y} width={plotArea.width} height={plotArea.height} />
+        </clipPath>
+        <filter id={`${id}-glow`} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feColorMatrix
+            in="blur"
+            type="matrix"
+            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.7 0"
+          />
+        </filter>
+        {segments.map((segment, index) => (
+          <linearGradient
+            key={`seg-${index}`}
+            id={`${id}-seg-${index}`}
+            gradientUnits="userSpaceOnUse"
+            x1={points[index].x}
+            y1={points[index].y}
+            x2={points[index + 1].x}
+            y2={points[index + 1].y}
+          >
+            <stop offset="0%" stopColor={segment.startColor} />
+            <stop offset="100%" stopColor={segment.endColor} />
+          </linearGradient>
+        ))}
+        {segments.map((segment, index) => (
+          <linearGradient
+            key={`seg-fill-${index}`}
+            id={`${id}-seg-fill-${index}`}
+            gradientUnits="userSpaceOnUse"
+            x1={points[index].x}
+            y1={points[index].y}
+            x2={points[index + 1].x}
+            y2={points[index + 1].y}
+          >
+            <stop offset="0%" stopColor={segment.startColor} stopOpacity={0.28} />
+            <stop offset="100%" stopColor={segment.endColor} stopOpacity={0.22} />
+          </linearGradient>
+        ))}
+      </defs>
+      <g clipPath={`url(#${id}-clip)`}>
+        {segments.map((segment, index) => (
+          <path
+            key={`fill-${index}`}
+            d={segment.fillD}
+            fill={`url(#${id}-seg-fill-${index})`}
+            mask="url(#fadeMask)"
+          />
+        ))}
+        {segments.map((segment, index) => (
+          <path
+            key={`stroke-${index}`}
+            d={segment.d}
+            fill="none"
+            stroke={`url(#${id}-seg-${index})`}
+            strokeWidth={2.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        ))}
+        {peaks.map((peak, index) => {
+          const color = getHeatColor(peak.resonance, peak.heatStatus);
+          return (
+            <circle
+              key={`peak-${index}`}
+              cx={peak.x}
+              cy={peak.y}
+              r={3.2}
+              fill={color}
+              filter={`url(#${id}-glow)`}
+            />
+          );
+        })}
+      </g>
+    </>
+  );
+};
 
 /**
  * EnergyChart Component / 能量趋势图表组件
@@ -127,7 +355,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
   // Empty state / 空状态
   if (tracks.length === 0) {
     return (
-      <div className="h-52 flex items-center justify-center border border-dashed border-slate-700 rounded-lg text-slate-500 text-xs bg-slate-900/50">
+      <div className="h-52 flex items-center justify-center glass-card border border-dashed border-white/15 rounded-lg text-slate-500 text-xs">
         Add tracks to view Energy Flow (添加歌曲以查看能量流向)
       </div>
     );
@@ -140,7 +368,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
 
   return (
     <div 
-        className="h-52 w-full bg-dj-panel rounded-lg p-2 shadow-sm border border-slate-700 flex flex-col relative overflow-hidden group select-none"
+        className="h-52 w-full glass-card rounded-lg p-2 flex flex-col relative overflow-hidden group select-none"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -163,12 +391,12 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
         </div>
         
         {/* --- Resonance Legend (共鸣度图例) --- */}
-        <div className="hidden sm:flex items-center gap-2 text-[9px] text-slate-500 bg-slate-900/50 px-2 py-0.5 rounded-full border border-slate-700/30">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-fuchsia-400"></span>Anthem (10)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Hit (8-9)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>Pop (6-7)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>Std (4-5)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-slate-500"></span>Deep (1-3)</span>
+        <div className="hidden sm:flex items-center gap-2 text-[9px] text-slate-500 glass-pill px-2 py-0.5 rounded-full">
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#E23BB8]"></span>Anthem (10)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#C04B9B]"></span>Hit (8-9)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#F28C3B]"></span>Pop (6-7)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#7BC96F]"></span>Std (4-5)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#2EC4D6]"></span>Deep (1-3)</span>
         </div>
         
         {/* Controls / 控制按钮 */}
@@ -180,7 +408,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                     </span>
                     <button 
                         onClick={(e) => { e.stopPropagation(); resetView(); }}
-                        className="text-[9px] text-slate-300 hover:text-white bg-slate-700 hover:bg-slate-600 px-1.5 py-0.5 rounded flex items-center gap-1 border border-slate-600 transition-colors"
+                        className="text-[9px] text-slate-300 hover:text-white btn-ghost px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
                     >
                         <RotateCcw className="w-2.5 h-2.5" /> Reset
                     </button>
@@ -202,32 +430,6 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
             margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
           >
             <defs>
-              {/* 
-                  Gradient Definition (渐变定义): 
-                  Changes color horizontally based on each track's resonance value.
-                  根据每首歌的共鸣度水平改变颜色。
-              */}
-              <linearGradient id="colorResonance" x1="0" y1="0" x2="1" y2="0">
-                {visibleData.map((entry, index) => {
-                    const offset = visibleData.length > 1 
-                        ? (index / (visibleData.length - 1)) * 100 
-                        : 0;
-                    
-                    // --- Color Mapping Logic (颜色映射逻辑) ---
-                    const heatReady = entry.heatStatus === 'ok' && typeof entry.resonance === 'number';
-                    let color = '#64748b'; // Default neutral when heat not ready
-                    if (heatReady) {
-                        if (entry.resonance >= 10) color = '#c084fc'; // 10: Fuchsia/Purple (炸场/Anthem)
-                        else if (entry.resonance >= 8) color = '#f43f5e'; // 8-9: Rose (热门/Hit)
-                        else if (entry.resonance >= 6) color = '#fbbf24'; // 6-7: Amber (流行/Popular)
-                        else if (entry.resonance <= 3) color = '#64748b'; // 1-3: Slate (冷门/Deep)
-                        else color = '#22d3ee'; // 4-5: Cyan (常规/Standard)
-                    }
-                    
-                    return <stop key={index} offset={`${offset}%`} stopColor={color} />;
-                })}
-              </linearGradient>
-
               {/* Vertical Opacity Mask (垂直透明度遮罩) */}
               <linearGradient id="opacityGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="white" stopOpacity={0.7}/>
@@ -237,10 +439,10 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                   <rect x="0" y="0" width="100%" height="100%" fill="url(#opacityGradient)" />
               </mask>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <CartesianGrid strokeDasharray="2 2" stroke="rgba(255,255,255,0.12)" vertical={false} />
             <XAxis 
                 dataKey="originalIndex" 
-                stroke="#64748b" 
+                stroke="#C9B7AC"
                 tick={{fontSize: 9}} 
                 type="number" 
                 domain={['dataMin', 'dataMax']}
@@ -248,20 +450,20 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                 allowDecimals={false}
                 tickCount={Math.min(visibleData.length, 10)}
             />
-            <YAxis stroke="#64748b" domain={[0, 12]} hide />
+            <YAxis stroke="#C9B7AC" domain={[0, 12]} hide />
             <Tooltip 
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9', fontSize: '10px' }}
-              itemStyle={{ color: '#06b6d4' }}
+              contentStyle={{ backgroundColor: 'rgba(42, 32, 52, 0.86)', borderColor: 'rgba(255,255,255,0.18)', color: '#F7ECE7', fontSize: '10px', borderRadius: '10px', backdropFilter: 'blur(12px)' }}
+              itemStyle={{ color: '#F4B15E' }}
               labelStyle={{ display: 'none' }}
               formatter={(value: number, name: string, props: any) => {
                   const heatReady = props.payload.heatStatus === 'ok' && typeof props.payload.resonance === 'number';
                   const resonanceValue = heatReady ? props.payload.resonance : null;
                   const resonanceLabel = heatReady ? `${resonanceValue}/10` : (props.payload.heatStatus === 'pending' ? '正在解析' : '—');
                   const resonanceClass = heatReady
-                    ? (resonanceValue >= 10 ? 'text-fuchsia-400 font-bold' :
-                      resonanceValue >= 8 ? 'text-rose-400 font-bold' : 
-                      resonanceValue >= 6 ? 'text-amber-400' :
-                      resonanceValue <= 3 ? 'text-slate-400' : 'text-cyan-400')
+                    ? (resonanceValue >= 10 ? 'text-[#E23BB8] font-bold' :
+                      resonanceValue >= 8 ? 'text-[#C04B9B] font-bold' : 
+                      resonanceValue >= 6 ? 'text-[#F28C3B]' :
+                      resonanceValue <= 3 ? 'text-[#2EC4D6]' : 'text-[#7BC96F]')
                     : 'text-slate-400';
                   return [
                     <div key="tooltip" className="flex flex-col gap-1">
@@ -279,13 +481,13 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
             <Area 
               type="monotone" 
               dataKey="energy" 
-              stroke="url(#colorResonance)" 
-              strokeWidth={2}
-              fill="url(#colorResonance)"
-              mask="url(#fadeMask)"
+              stroke="transparent" 
+              strokeWidth={0}
+              fill="transparent"
               animationDuration={300}
               isAnimationActive={!isDragging} // Disable animation during drag for perf / 拖拽时禁用动画
             />
+            <Customized component={(props: any) => <SegmentedEnergyCurve {...props} data={visibleData} />} />
           </AreaChart>
         </ResponsiveContainer>
         
@@ -293,7 +495,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
         {canScrollLeft && (
             <button 
                 onClick={(e) => slideView('left', e)}
-                className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-r-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white backdrop-blur-sm border-y border-r border-slate-700/50 shadow-lg transition-all opacity-0 group-hover:opacity-100 z-20"
+                className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-r-lg btn-ghost text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
             >
                 <ChevronLeft className="w-4 h-4" />
             </button>
@@ -302,7 +504,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
         {canScrollRight && (
             <button 
                 onClick={(e) => slideView('right', e)}
-                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-l-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white backdrop-blur-sm border-y border-l border-slate-700/50 shadow-lg transition-all opacity-0 group-hover:opacity-100 z-20"
+                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-l-lg btn-ghost text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
             >
                 <ChevronRight className="w-4 h-4" />
             </button>

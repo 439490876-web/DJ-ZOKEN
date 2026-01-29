@@ -24,7 +24,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="bg-slate-900/60 border border-slate-800/60 rounded-lg p-2">
+    <div className="glass-card rounded-lg p-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-[10px] text-slate-400 uppercase tracking-wider">已保存 Set 库</div>
         <button
@@ -56,7 +56,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
                 disabled={isCurrent}
                 className={`w-full text-left px-2 py-2 rounded-md border transition-colors ${
                   isCurrent
-                    ? 'bg-gradient-to-r from-indigo-500/30 to-sky-500/20 border-indigo-400/40 text-white'
+                    ? 'bg-gradient-to-r from-dj-accent/30 to-dj-primary/20 border-dj-primary/30 text-white'
                     : 'bg-slate-900/40 border-slate-800/60 text-slate-300 hover:bg-slate-800/70 hover:text-white'
                 }`}
               >
@@ -66,7 +66,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
                     <span
                       className={`text-[9px] px-1.5 py-0.5 rounded-full border ${
                         isCurrent
-                          ? 'border-indigo-300/40 text-indigo-200'
+                          ? 'border-dj-primary/30 text-dj-primary'
                           : 'border-slate-700 text-slate-400'
                       }`}
                     >
@@ -78,7 +78,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
                         event.stopPropagation()
                         onRenameSet(setList)
                       }}
-                      className="p-1 rounded hover:bg-slate-700/60 text-slate-400 hover:text-white"
+                      className="p-1 rounded btn-ghost text-slate-400 hover:text-white"
                       title="重命名"
                     >
                       <Pencil className="w-3 h-3" />
@@ -89,7 +89,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
                         event.stopPropagation()
                         onDeleteSet(setList)
                       }}
-                      className="p-1 rounded hover:bg-rose-500/20 text-slate-400 hover:text-rose-200"
+                      className="p-1 rounded btn-ghost text-slate-400 hover:text-rose-200"
                       title="删除"
                     >
                       <Trash2 className="w-3 h-3" />

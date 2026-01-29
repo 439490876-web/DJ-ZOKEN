@@ -95,8 +95,8 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="w-full max-w-md rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl glass-panel p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-white">导出 Set</h3>
           <button
@@ -121,7 +121,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               aria-label="Set 名称"
               value={setName}
               onChange={(event) => setSetName(event.target.value)}
-              className="w-full rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              className="w-full glass-input rounded-full px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-dj-accent/40"
             />
           </div>
 
@@ -135,7 +135,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             <select
               id="export-source"
               aria-label="导出对象"
-              className="w-full rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
+              className="w-full glass-input rounded-full px-3 py-2 text-sm"
               value={sourceType}
               onChange={(event) => setSourceType(event.target.value as 'current' | 'saved')}
             >
@@ -155,7 +155,7 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
               <select
                 id="export-saved-set"
                 aria-label="已保存 Set"
-                className="w-full rounded-md border border-slate-700 bg-slate-950/40 px-3 py-2 text-sm text-slate-300"
+                className="w-full glass-input rounded-full px-3 py-2 text-sm"
                 value={selectedSetId}
                 onChange={(event) => setSelectedSetId(event.target.value)}
               >
@@ -197,13 +197,13 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             </label>
           </fieldset>
 
-          <div className="rounded-md border border-slate-800 bg-slate-950/50 p-3 text-xs text-slate-400">
+          <div className="rounded-md glass-card p-3 text-xs text-slate-400">
             {target === 'rekordbox'
               ? 'Rekordbox 将更新固定的 ZOKEN SETGPT.xml（导入一次后可刷新，曲库用于索引）'
               : '导出位置：将自动检测目标软件目录'}
           </div>
 
-          <div className="rounded-md border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-400">
+          <div className="rounded-md glass-card p-3 text-xs text-slate-400">
             将导出 {payload.filePaths.length} 首 / 共 {activeTracks.length} 首
           </div>
 
@@ -258,14 +258,14 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="rounded-md border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:text-white"
+            className="rounded-full btn-ghost px-4 py-2 text-sm"
           >
             取消
           </button>
           <button
             onClick={() => onConfirm(payload)}
             disabled={!canConfirm}
-            className="rounded-md bg-emerald-400 px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full btn-candy px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "导出中..." : "确认导出"}
           </button>

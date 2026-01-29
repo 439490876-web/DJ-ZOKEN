@@ -40,7 +40,7 @@ const getSeverityBadgeStyles = (s: string) => {
     switch(s) {
         case 'critical': return 'bg-red-500/20 text-red-300 border-red-500/50 shadow-[0_0_10px_rgba(239,68,68,0.2)]';
         case 'warning': return 'bg-amber-500/20 text-amber-300 border-amber-500/50';
-        case 'info': return 'bg-blue-500/20 text-blue-300 border-blue-500/50';
+        case 'info': return 'bg-dj-primary/20 text-dj-primary border-dj-primary/40';
         case 'success': return 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50';
         default: return 'bg-slate-700 text-slate-300';
     }
@@ -50,7 +50,7 @@ const getCardBackgroundTint = (issues: any[]) => {
     if (issues.some(i => i.severity === 'critical')) return 'bg-red-900/10 border-l-red-500';
     if (issues.some(i => i.severity === 'warning')) return 'bg-amber-900/10 border-l-amber-500';
     if (issues.some(i => i.severity === 'success')) return 'bg-emerald-900/10'; 
-    if (issues.some(i => i.severity === 'info')) return 'bg-blue-900/10';
+    if (issues.some(i => i.severity === 'info')) return 'bg-dj-primary/10';
     return '';
 };
 
@@ -201,19 +201,19 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
 
         <div className="flex items-center gap-2">
             {/* Harmonic Strictness Toggle (调性严谨度切换) */}
-            <div className="flex items-center gap-2 bg-slate-900/50 p-1 rounded-lg border border-slate-700/50">
+            <div className="flex items-center gap-2 glass-card p-1 rounded-full">
                 <div className="px-2 text-xs text-slate-500 font-bold flex items-center gap-1">
                     <SlidersHorizontal className="w-3 h-3" />
                     Keys:
                 </div>
-                <div className="flex bg-slate-800 rounded-md p-0.5">
+                <div className="flex glass-pill rounded-full p-0.5">
                     {(['strict', 'standard', 'loose'] as const).map(level => (
                         <button
                             key={level}
                             onClick={() => setStrictness(level)}
                             className={`px-3 py-1 rounded text-xs font-medium transition-all ${
                                 strictness === level 
-                                ? 'bg-dj-panel text-white shadow-sm ring-1 ring-white/10' 
+                                ? 'btn-candy text-slate-900 shadow-sm' 
                                 : 'text-slate-500 hover:text-slate-300'
                             }`}
                         >
@@ -228,7 +228,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
       {/* --- Track List (歌曲列表) --- */}
       <div className="flex-1 overflow-y-auto pr-2 space-y-2 pb-20 custom-scrollbar">
         {setTracks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
+          <div className="flex flex-col items-center justify-center h-64 text-slate-500 glass-card border-2 border-dashed border-white/10 rounded-xl">
             <Music2 className="w-12 h-12 mb-2 opacity-50" />
             <p>Drag tracks from library or click "+" (从曲库拖拽或点击+号)</p>
           </div>
@@ -310,7 +310,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                  if (r >= 10) return { text: 'text-fuchsia-400 font-bold', fill: 'fill-fuchsia-500/20' }; // Anthem
                  if (r >= 8) return { text: 'text-rose-500 font-bold', fill: 'fill-rose-500/20' }; // Hit
                  if (r >= 6) return { text: 'text-amber-400 font-medium', fill: 'fill-amber-500/20' }; // Pop
-                 if (r >= 4) return { text: 'text-cyan-400', fill: '' }; // Standard
+                 if (r >= 4) return { text: 'text-dj-accent', fill: '' }; // Standard
                  return { text: 'text-slate-600', fill: '' }; // Deep/Low
             };
 
@@ -351,10 +351,10 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                      const actualEnergyDiff = track.energy - prevTrack.energy;
                      let label = 'Harmonic (和谐)';
                      let Icon = CheckCircle2;
-                     let colorClass = 'bg-blue-500/20 text-blue-400 border-blue-500/20'; 
+                     let colorClass = 'bg-dj-primary/20 text-dj-primary border-dj-primary/30'; 
 
                      if (actualEnergyDiff >= 2) {
-                        label = 'Energy Lift (提升)'; Icon = TrendingUp; colorClass = 'bg-cyan-500/20 text-cyan-400 border-cyan-500/20';
+                        label = 'Energy Lift (提升)'; Icon = TrendingUp; colorClass = 'bg-dj-accent/20 text-dj-accent border-dj-accent/30';
                      } else if (actualEnergyDiff <= -2) {
                         label = 'Energy Drop (回落)'; Icon = TrendingDown; colorClass = 'bg-indigo-500/20 text-indigo-400 border-indigo-500/20';
                      } else if (isDoubleTime) {
@@ -371,7 +371,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                                 let diff = k2.num - k1.num;
                                 if (diff === -11) diff = 1; if (diff === 11) diff = -1;
                                 if (diff === 1 || diff === 2) {
-                                    label = 'Energy Boost (推进)'; Icon = ArrowUpRight; colorClass = 'bg-sky-500/20 text-sky-400 border-sky-500/20';
+                                    label = 'Energy Boost (推进)'; Icon = ArrowUpRight; colorClass = 'bg-dj-primary/20 text-dj-primary border-dj-primary/30';
                                 } else if (diff === -1 || diff === -2) {
                                     label = 'Energy Cool (收敛)'; Icon = ArrowDownRight; colorClass = 'bg-slate-500/20 text-slate-400 border-slate-500/20';
                                 }
@@ -420,7 +420,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                 )}
                 
                 {/* Track Card (歌曲卡片) */}
-                <div className={`bg-dj-panel hover:bg-slate-800 transition-colors rounded-lg p-3 flex flex-col gap-2 border-l-4 shadow-sm relative cursor-grab active:cursor-grabbing mt-1
+                <div className={`glass-card hover:bg-slate-800/70 transition-colors rounded-lg p-3 flex flex-col gap-2 border-l-4 shadow-sm relative cursor-grab active:cursor-grabbing mt-1
                     ${baseBorderClass} ${issueTint} ${highlightClass}
                 `}>
                   <div className="flex items-center gap-4">
@@ -471,7 +471,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                                 {displayGenre}
                               </span>
 
-                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ml-1 ${displayKey.includes('A') ? 'bg-pink-500/10 text-pink-400' : 'bg-cyan-500/10 text-cyan-400'}`}>
+                              <span className={`text-xs font-bold px-1.5 py-0.5 rounded ml-1 ${displayKey.includes('A') ? 'bg-dj-accent/10 text-dj-accent' : 'bg-dj-primary/10 text-dj-primary'}`}>
                                 {displayKey}
                               </span>
                           </div>
@@ -496,7 +496,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                                 {/* Energy */}
                                 <div className={`flex items-center gap-1 ${
                                     isHighEnergy ? 'text-yellow-400 font-bold' : 
-                                    isLowEnergy ? 'text-cyan-400' : 'text-slate-300'
+                                    isLowEnergy ? 'text-dj-accent' : 'text-slate-300'
                                 }`}>
                                     <Zap className={`w-3 h-3 ${isHighEnergy ? 'fill-yellow-500/20' : ''}`} />
                                     <span>{energyDisplay.state === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : energyDisplay.label}</span>
