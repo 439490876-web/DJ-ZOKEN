@@ -8,6 +8,7 @@ import { formatHeatMeta } from '../services/heatMeta';
 import { getSmartBridgeRecommendation } from '../services/geminiService';
 import { X, Disc, Activity, Music2, GripVertical, AlertTriangle, Scissors, AudioLines, SlidersHorizontal, Sparkles, Loader2, Zap, Flame, Waves, Minus, TrendingUp, TrendingDown, Tag, Layers, Link, ArrowRightLeft, CheckCircle2, AlertOctagon, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Target, Timer, Hourglass, Rabbit, Turtle, Wand2, Lightbulb } from 'lucide-react';
 import { GlassCard } from './GlassCard';
+import { SegmentedControl } from './SegmentedControl';
 
 interface SetBuilderProps {
   setTracks: Track[];
@@ -202,36 +203,30 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
 
         <div className="flex items-center gap-2">
             {/* Harmonic Strictness Toggle (调性严谨度切换) */}
-            <GlassCard className="flex items-center gap-2 p-1 rounded-full">
-                <div className="px-2 text-xs text-slate-500 font-bold flex items-center gap-1">
-                    <SlidersHorizontal className="w-3 h-3" />
-                    Keys:
-                </div>
-                <div className="flex glass-pill rounded-full p-0.5">
-                    {(['strict', 'standard', 'loose'] as const).map(level => (
-                        <button
-                            key={level}
-                            onClick={() => setStrictness(level)}
-                            className={`px-3 py-1 rounded text-xs font-medium transition-all ${
-                                strictness === level 
-                                ? 'btn-primary text-slate-900 shadow-sm' 
-                                : 'text-slate-500 hover:text-slate-300'
-                            }`}
-                        >
-                            {level === 'strict' ? 'Strict' : level === 'standard' ? 'Std' : 'Loose'}
-                        </button>
-                    ))}
-                </div>
-            </GlassCard>
+            <div className="flex items-center gap-2 text-[11px] text-slate-500 font-semibold">
+                <SlidersHorizontal className="w-3 h-3" />
+                Keys:
+            </div>
+            <SegmentedControl
+                size="compact"
+                value={strictness}
+                onChange={(value) => setStrictness(value as StrictnessLevel)}
+                options={[
+                    { id: 'strict', label: 'Strict' },
+                    { id: 'standard', label: 'Std' },
+                    { id: 'loose', label: 'Loose' },
+                ]}
+            />
         </div>
       </div>
 
       {/* --- Track List (歌曲列表) --- */}
       <div className="flex-1 overflow-y-auto pr-2 space-y-2 pb-20 custom-scrollbar">
         {setTracks.length === 0 ? (
-          <GlassCard className="flex flex-col items-center justify-center h-64 text-slate-500 border-2 border-dashed border-white/10 rounded-xl">
-            <Music2 className="w-12 h-12 mb-2 opacity-50" />
-            <p>Drag tracks from library or click "+" (从曲库拖拽或点击+号)</p>
+          <GlassCard className="flex flex-col items-center justify-center h-64 macos-dropzone text-slate-400">
+            <Music2 className="w-12 h-12 mb-2 opacity-60" />
+            <div className="text-sm font-semibold text-slate-200">Drag tracks from library</div>
+            <div className="text-xs text-slate-400">或点击 “+” 按钮添加</div>
           </GlassCard>
         ) : (
           setTracks.map((track, index) => {

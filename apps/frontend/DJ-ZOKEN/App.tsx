@@ -2563,7 +2563,7 @@ const App: React.FC = () => {
           <GlassButton 
             onClick={() => setShowResetConfirm(true)}
             variant="secondary"
-            className="flex-1 py-3 rounded-full text-sm"
+            className="flex-1 h-9 text-sm"
           >
             <RotateCcw className="w-4 h-4" /> 重置
           </GlassButton>
@@ -2571,14 +2571,14 @@ const App: React.FC = () => {
             onClick={handleOpenExport}
             disabled={setTracks.length === 0}
             variant="secondary"
-            className="flex-1 py-3 rounded-full text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 h-9 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowUpRight className="w-4 h-4" /> 导出
           </GlassButton>
           <GlassButton 
             onClick={saveSet}
             variant="primary"
-            className="flex-1 py-3 rounded-full text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 h-9 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-4 h-4" /> 保存 Setlist
           </GlassButton>
