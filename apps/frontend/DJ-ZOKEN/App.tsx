@@ -18,6 +18,7 @@ import { SetBuilder } from './components/SetBuilder';
 import { ExportDialog } from './components/ExportDialog';
 import { ResetConfirmDialog } from './components/ResetConfirmDialog';
 import { SavedSetLibrary } from './components/SavedSetLibrary';
+import { ThemeToggle } from './components/ThemeToggle';
 import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye, Pencil, FolderPlus, Folder, Trash2, ListOrdered, ArrowUpRight } from 'lucide-react';
 
 type SortKey = 'bpm' | 'key' | 'energy' | 'resonance' | 'import';
@@ -1962,10 +1963,19 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="h-screen w-full bg-transparent flex text-slate-200 overflow-hidden font-sans app-shell">
-      
+    <div className="h-screen w-full bg-transparent flex flex-col text-slate-200 overflow-hidden font-sans app-shell">
+
+      <div className="app-topbar">
+        <div className="app-topbar-title">
+          <span className="app-topbar-dot"></span>
+          <span>SpinFlow Studio</span>
+        </div>
+        <ThemeToggle />
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
       {/* 左侧: 曲库面板 */}
-      <div className="w-1/3 min-w-[350px] max-w-md flex flex-col glass-panel panel-soft">
+      <div className="w-[28%] min-w-[320px] max-w-[420px] flex flex-col glass-panel panel-soft">
         <div className="p-4 glass-card z-10 flex flex-col gap-3">
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dj-accent shadow-[0_0_12px_rgba(180,138,166,0.7)]"></div>
@@ -1988,7 +1998,7 @@ const App: React.FC = () => {
             onClick={() => setIsFocusMode(!isFocusMode)}
             className={`w-full py-2 px-3 rounded-full flex items-center justify-between text-xs font-bold transition-all ${
                 isFocusMode 
-                ? 'btn-candy text-slate-900'
+                ? 'btn-primary text-slate-900'
                 : 'glass-pill hover:text-white'
             }`}
           >
@@ -2014,7 +2024,7 @@ const App: React.FC = () => {
                 onClick={() => setSelectedCategory(null)}
                 className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
                     selectedCategory === null 
-                    ? 'btn-candy text-slate-900 shadow-md' 
+                    ? 'btn-primary text-slate-900 shadow-md' 
                     : 'glass-pill hover:text-white'
                 }`}
             >
@@ -2026,7 +2036,7 @@ const App: React.FC = () => {
                     onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
                     className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                         selectedCategory === cat 
-                        ? 'btn-candy text-slate-900 shadow-md' 
+                        ? 'btn-primary text-slate-900 shadow-md' 
                         : 'glass-pill hover:text-white'
                     }`}
                 >
@@ -2127,7 +2137,7 @@ const App: React.FC = () => {
               />
               <button
                 onClick={handleCreateFolder}
-                className="px-2 py-1 rounded-full btn-ghost text-xs flex items-center gap-1"
+                className="px-2 py-1 rounded-full btn-secondary text-xs flex items-center gap-1"
               >
                 <FolderPlus className="w-3 h-3" /> 新建
               </button>
@@ -2491,7 +2501,7 @@ const App: React.FC = () => {
                     onClick={() => setSetType('warmup')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         setType === 'warmup' 
-                        ? 'btn-candy text-slate-900 shadow-lg' 
+                        ? 'btn-primary text-slate-900 shadow-lg' 
                         : 'glass-pill hover:text-white'
                     }`}
                 >
@@ -2501,7 +2511,7 @@ const App: React.FC = () => {
                     onClick={() => setSetType('prime')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         setType === 'prime' 
-                        ? 'btn-candy text-slate-900 shadow-lg' 
+                        ? 'btn-primary text-slate-900 shadow-lg' 
                         : 'glass-pill hover:text-white'
                     }`}
                 >
@@ -2511,7 +2521,7 @@ const App: React.FC = () => {
                     onClick={() => setSetType('closing')}
                     className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
                         setType === 'closing' 
-                        ? 'btn-candy text-slate-900 shadow-lg' 
+                        ? 'btn-primary text-slate-900 shadow-lg' 
                         : 'glass-pill hover:text-white'
                     }`}
                 >
@@ -2536,7 +2546,7 @@ const App: React.FC = () => {
                 />
                 <button
                     onClick={handleNewSet}
-                    className="px-3 py-2 rounded-full btn-ghost text-[12px] font-semibold transition-colors"
+                    className="px-3 py-2 rounded-full btn-secondary text-[12px] font-semibold transition-colors"
                 >
                     新建 Set
                 </button>
@@ -2575,20 +2585,20 @@ const App: React.FC = () => {
         <div className="p-4 glass-panel flex gap-3">
           <button 
             onClick={() => setShowResetConfirm(true)}
-            className="flex-1 py-3 rounded-full btn-ghost flex items-center justify-center gap-2 text-sm transition-colors"
+            className="flex-1 py-3 rounded-full btn-secondary flex items-center justify-center gap-2 text-sm transition-colors"
           >
             <RotateCcw className="w-4 h-4" /> 重置
           </button>
           <button
             onClick={handleOpenExport}
             disabled={setTracks.length === 0}
-            className="flex-1 py-3 rounded-full btn-ghost flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 rounded-full btn-secondary flex items-center justify-center gap-2 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <ArrowUpRight className="w-4 h-4" /> 导出
           </button>
           <button 
             onClick={saveSet}
-            className="flex-1 py-3 rounded-full btn-candy text-slate-900 font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 rounded-full btn-primary text-slate-900 font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-4 h-4" /> 保存 Setlist
           </button>
@@ -2596,7 +2606,7 @@ const App: React.FC = () => {
       </div>
 
       {/* 右侧: 分析与 AI 面板 */}
-      <div className="w-[600px] flex flex-col glass-panel panel-soft">
+      <div className="w-[28%] min-w-[320px] max-w-[420px] flex flex-col glass-panel panel-soft">
         
         {/* 上半部分: 实时诊断与数据 */}
         <div className="flex flex-col shadow-xl z-10 max-h-[55%] min-h-[40%] resize-y overflow-hidden relative">
@@ -2709,13 +2719,13 @@ const App: React.FC = () => {
                          />
                          <button
                              onClick={handleSaveApiKey}
-                             className="px-2.5 py-1 rounded-full btn-candy text-[10px] font-bold"
+                             className="px-2.5 py-1 rounded-full btn-primary text-[10px] font-bold"
                          >
                              保存
                          </button>
                          <button
                              onClick={handleClearApiKey}
-                             className="px-2.5 py-1 rounded-full btn-ghost transition-all text-[10px] font-bold"
+                             className="px-2.5 py-1 rounded-full btn-secondary transition-all text-[10px] font-bold"
                          >
                              清除
                          </button>
@@ -2726,7 +2736,7 @@ const App: React.FC = () => {
                     <button 
                         onClick={handleAiSuggest} 
                         disabled={isAiSuggesting}
-                        className="w-full py-2.5 px-4 rounded-full btn-candy text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                        className="w-full py-2.5 px-4 rounded-full btn-primary text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
                     >
                        {isAiSuggesting ? <Loader2 className="w-3 h-3 animate-spin"/> : <ScanEye className="w-3 h-3" />}
                        {isAiSuggesting ? '正在分析...' : '寻找下一首最佳衔接'}
@@ -2814,6 +2824,7 @@ const App: React.FC = () => {
         </div>
 
       </div>
+    </div>
 
       {editTrackId && (
         <div
@@ -2922,7 +2933,7 @@ const App: React.FC = () => {
               </button>
               <button
                 onClick={applyEditTrack}
-                className="px-4 py-1.5 rounded-full btn-candy text-slate-900 text-xs font-semibold transition-colors"
+                className="px-4 py-1.5 rounded-full btn-primary text-slate-900 text-xs font-semibold transition-colors"
               >
                 保存修改
               </button>
