@@ -1,11 +1,7 @@
 import React from 'react';
 import { Moon, Sun } from 'lucide-react';
 import { getStoredTheme, setStoredTheme, ThemeMode } from '../services/themeStorage';
-
-const themeLabels: Record<ThemeMode, string> = {
-  warm: 'Warm Glass',
-  neutral: 'Neutral Smoke',
-};
+import { SegmentedControl } from './SegmentedControl';
 
 export const ThemeToggle: React.FC = () => {
   const [theme, setTheme] = React.useState<ThemeMode>(() => getStoredTheme());
@@ -16,25 +12,13 @@ export const ThemeToggle: React.FC = () => {
   };
 
   return (
-    <div className="theme-toggle" role="group" aria-label="Theme toggle">
-      <button
-        type="button"
-        onClick={() => handleSetTheme('warm')}
-        className={theme === 'warm' ? 'active' : ''}
-      >
-        <span className="flex items-center gap-1">
-          <Sun className="w-3 h-3" /> {themeLabels.warm}
-        </span>
-      </button>
-      <button
-        type="button"
-        onClick={() => handleSetTheme('neutral')}
-        className={theme === 'neutral' ? 'active' : ''}
-      >
-        <span className="flex items-center gap-1">
-          <Moon className="w-3 h-3" /> {themeLabels.neutral}
-        </span>
-      </button>
-    </div>
+    <SegmentedControl
+      options={[
+        { id: 'warm', label: 'Warm Glass', icon: <Sun className="w-3 h-3" /> },
+        { id: 'neutral', label: 'Neutral Smoke', icon: <Moon className="w-3 h-3" /> },
+      ]}
+      value={theme}
+      onChange={(value) => handleSetTheme(value as ThemeMode)}
+    />
   );
 };
