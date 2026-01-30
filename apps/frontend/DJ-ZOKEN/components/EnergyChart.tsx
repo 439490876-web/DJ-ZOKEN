@@ -16,11 +16,11 @@ type HeatBand = {
 };
 
 const HEAT_BANDS: HeatBand[] = [
-  { min: 1, max: 3, from: '#0B1D3A', to: '#2EC4D6' }, // Deep Ocean Blue -> Cyan
-  { min: 4, max: 5, from: '#1F9E9A', to: '#7BC96F' }, // Teal -> Lime Green
-  { min: 6, max: 7, from: '#F4C45E', to: '#F28C3B' }, // Warm Yellow -> Orange
-  { min: 8, max: 9, from: '#E26A2C', to: '#C04B9B' }, // Deep Orange -> Magenta
-  { min: 10, max: 10, from: '#E93B2F', to: '#E23BB8' }, // Vibrant Red -> Blazing Fuchsia
+  { min: 1, max: 3, from: '#3A332D', to: '#6B5E54' }, // Deep warm charcoal
+  { min: 4, max: 5, from: '#7A6A5C', to: '#9C8775' }, // Warm neutral
+  { min: 6, max: 7, from: '#D2A56D', to: '#C8874F' }, // Warm amber
+  { min: 8, max: 9, from: '#D08A5E', to: '#B46C50' }, // Copper
+  { min: 10, max: 10, from: '#E2B36B', to: '#D08A5E' }, // Anthem highlight
 ];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
@@ -393,11 +393,11 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
         
         {/* --- Resonance Legend (共鸣度图例) --- */}
         <div className="hidden sm:flex items-center gap-2 text-[9px] text-slate-500 glass-pill px-2 py-0.5 rounded-full">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#E23BB8]"></span>Anthem (10)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#C04B9B]"></span>Hit (8-9)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#F28C3B]"></span>Pop (6-7)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#7BC96F]"></span>Std (4-5)</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#2EC4D6]"></span>Deep (1-3)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#E2B36B]"></span>Anthem (10)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#D08A5E]"></span>Hit (8-9)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#C8874F]"></span>Pop (6-7)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#9C8775]"></span>Std (4-5)</span>
+            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#6B5E54]"></span>Deep (1-3)</span>
         </div>
         
         {/* Controls / 控制按钮 */}
@@ -440,10 +440,10 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                   <rect x="0" y="0" width="100%" height="100%" fill="url(#opacityGradient)" />
               </mask>
             </defs>
-            <CartesianGrid strokeDasharray="2 2" stroke="rgba(255,255,255,0.12)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" vertical={false} />
             <XAxis 
                 dataKey="originalIndex" 
-                stroke="#C9B7AC"
+                stroke="#B8A79C"
                 tick={{fontSize: 9}} 
                 type="number" 
                 domain={['dataMin', 'dataMax']}
@@ -451,20 +451,20 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                 allowDecimals={false}
                 tickCount={Math.min(visibleData.length, 10)}
             />
-            <YAxis stroke="#C9B7AC" domain={[0, 12]} hide />
+            <YAxis stroke="#B8A79C" domain={[0, 12]} hide />
             <Tooltip 
-              contentStyle={{ backgroundColor: 'rgba(42, 32, 52, 0.86)', borderColor: 'rgba(255,255,255,0.18)', color: '#F7ECE7', fontSize: '10px', borderRadius: '10px', backdropFilter: 'blur(12px)' }}
-              itemStyle={{ color: '#F4B15E' }}
+              contentStyle={{ backgroundColor: 'rgba(32, 28, 24, 0.86)', borderColor: 'rgba(255,255,255,0.16)', color: '#F2EDE6', fontSize: '10px', borderRadius: '10px', backdropFilter: 'blur(12px)' }}
+              itemStyle={{ color: '#E2B36B' }}
               labelStyle={{ display: 'none' }}
               formatter={(value: number, name: string, props: any) => {
                   const heatReady = props.payload.heatStatus === 'ok' && typeof props.payload.resonance === 'number';
                   const resonanceValue = heatReady ? props.payload.resonance : null;
                   const resonanceLabel = heatReady ? `${resonanceValue}/10` : (props.payload.heatStatus === 'pending' ? '正在解析' : '—');
                   const resonanceClass = heatReady
-                    ? (resonanceValue >= 10 ? 'text-[#E23BB8] font-bold' :
-                      resonanceValue >= 8 ? 'text-[#C04B9B] font-bold' : 
-                      resonanceValue >= 6 ? 'text-[#F28C3B]' :
-                      resonanceValue <= 3 ? 'text-[#2EC4D6]' : 'text-[#7BC96F]')
+                    ? (resonanceValue >= 10 ? 'text-[#E2B36B] font-bold' :
+                      resonanceValue >= 8 ? 'text-[#D08A5E] font-bold' : 
+                      resonanceValue >= 6 ? 'text-[#C8874F]' :
+                      resonanceValue <= 3 ? 'text-[#6B5E54]' : 'text-[#9C8775]')
                     : 'text-slate-400';
                   return [
                     <div key="tooltip" className="flex flex-col gap-1">

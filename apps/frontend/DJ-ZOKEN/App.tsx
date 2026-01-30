@@ -2324,7 +2324,7 @@ const App: React.FC = () => {
             </div>
             
             {processedLibrary.length === 0 && (
-                <div className="p-8 text-center text-slate-500 text-sm flex flex-col items-center gap-2">
+                <GlassCard tone="subtle" className="p-8 text-center text-slate-500 text-sm flex flex-col items-center gap-2 border border-dashed border-white/10">
                     <Filter className="w-8 h-8 opacity-20" />
                     <p>
                       {selectedFolderId
@@ -2332,7 +2332,7 @@ const App: React.FC = () => {
                         : '曲库为空，可拖拽导入；导入后可点击编辑修正'}
                     </p>
                     {isFocusMode && <p className="text-xs text-slate-600">专注模式已过滤部分歌曲</p>}
-                </div>
+                </GlassCard>
             )}
 
             {processedLibrary.map(track => {
@@ -2358,11 +2358,13 @@ const App: React.FC = () => {
                 const resonanceValue = resonanceDisplay.value ?? 5;
                 const errorMessage = track.status === 'failed' ? normalizeErrorMessage(track.error) : null;
                 const heatErrorMessage = track.heatError ? normalizeErrorMessage(track.heatError) : null;
+                const isEditing = editTrackId === track.id;
 
                 return (
-                    <div 
-                        key={track.id} 
-                        className={`relative p-2 rounded-md flex items-center justify-between group border border-transparent transition-all hover:bg-slate-800 hover:border-slate-700 ${isImportSort && libraryDragOverId === track.id ? 'bg-slate-800/60' : ''}`}
+                    <GlassCard 
+                        key={track.id}
+                        tone="subtle"
+                        className={`relative p-2 rounded-md flex items-center justify-between group track-row ${isEditing ? 'track-row--active' : ''} ${isImportSort && libraryDragOverId === track.id ? 'track-row--drop' : ''}`}
                         draggable
                         onDragStart={(e) => {
                             e.dataTransfer.setData('text/plain', track.id);
@@ -2434,32 +2436,28 @@ const App: React.FC = () => {
                                             e.stopPropagation();
                                             setSelectedCategory(isCatActive ? null : trackCategory);
                                         }}
-                                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] border cursor-pointer transition-colors ${
-                                            isCatActive 
-                                            ? 'bg-indigo-600 text-white border-indigo-500' 
-                                            : 'bg-slate-700/50 text-slate-400 border-slate-700 hover:bg-slate-600 hover:text-slate-200'
-                                        }`} 
+                                        className={`pill cursor-pointer transition-colors ${isCatActive ? 'pill--active' : ''}`}
                                         title={`筛选所有 ${trackCategory} 风格`}
                                     >
                                         <Tag className="w-2.5 h-2.5" /> {displayGenre}
                                     </span>
 
-                                    <span className="flex items-center gap-1 bg-slate-800/80 px-1.5 py-0.5 rounded text-[10px] text-slate-300 font-mono">
+                                    <span className="pill pill--mono">
                                         <Activity className="w-3 h-3 text-dj-accent" /> {displayBpm}
                                     </span>
-                                    <span className="flex items-center gap-1 bg-slate-800/80 px-1.5 py-0.5 rounded text-[10px] text-slate-300 font-mono">
+                                    <span className="pill pill--mono">
                                         <Music className="w-3 h-3 text-dj-primary" /> {displayKey}
                                     </span>
-                                    <span className="flex items-center gap-1 bg-slate-800/80 px-1.5 py-0.5 rounded text-[10px] text-slate-300 font-mono" title={energyDisplay.reason || '能量'}>
+                                    <span className="pill pill--mono pill--warn" title={energyDisplay.reason || '能量'}>
                                         <Zap className="w-3 h-3 text-yellow-500" />
                                         {energyDisplay.state === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : energyDisplay.label}
                                     </span>
-                                    <span className="flex items-center gap-1 bg-slate-800/80 px-1.5 py-0.5 rounded text-[10px] text-slate-300 font-mono" title={(resonanceDisplay.reason || '共鸣') + (hasHeatMeta ? ` | ${heatMetaLabel}` : '')}>
+                                    <span className={`pill pill--mono ${heatReady && resonanceValue > 7 ? 'pill--danger' : ''}`} title={(resonanceDisplay.reason || '共鸣') + (hasHeatMeta ? ` | ${heatMetaLabel}` : '')}>
                                         <Flame className={`w-3 h-3 ${heatReady && resonanceValue > 7 ? 'text-orange-500' : 'text-slate-500'}`} />
                                         {resonanceDisplay.state === 'pending' ? <Loader2 className="w-3 h-3 animate-spin" /> : resonanceDisplay.label}
                                     </span>
                                 {hasHeatMeta && (
-                                    <div className="text-[9px] text-slate-500 font-mono">heat {heatMetaLabel}</div>
+                                    <div className="pill pill--mono text-[9px]">heat {heatMetaLabel}</div>
                                 )}
                                 </div>
                             </div>
@@ -2490,7 +2488,7 @@ const App: React.FC = () => {
                                 <Plus className="w-4 h-4" />
                             </button>
                         </div>
-                    </div>
+                    </GlassCard>
                 )
             })}
         </div>
@@ -2820,10 +2818,10 @@ const App: React.FC = () => {
                     })}
                     
                     {aiSuggestions.length === 0 && !isAiSuggesting && setTracks.length > 0 && (
-                        <div className="text-center py-6 opacity-30">
-                            <Sparkles className="w-8 h-8 mx-auto mb-1" />
-                            <p className="text-[10px]">点击上方按钮获取 AI 推荐</p>
-                        </div>
+                        <GlassCard tone="subtle" className="text-center py-6 px-4 text-slate-500 text-[10px]">
+                            <Sparkles className="w-7 h-7 mx-auto mb-2 opacity-30" />
+                            <p>点击上方按钮获取下一首推荐</p>
+                        </GlassCard>
                     )}
                  </div>
             </div>
