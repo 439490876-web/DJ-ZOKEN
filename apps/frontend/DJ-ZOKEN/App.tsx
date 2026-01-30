@@ -2220,7 +2220,7 @@ const App: React.FC = () => {
                   </div>
               )}
           </div>
-        </div>
+        </GlassCard>
 
         {/* 曲库列表渲染 */}
         <div
