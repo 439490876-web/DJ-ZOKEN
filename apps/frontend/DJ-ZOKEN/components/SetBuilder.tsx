@@ -7,6 +7,7 @@ import { getMetricDisplay } from '../services/metricDisplay';
 import { formatHeatMeta } from '../services/heatMeta';
 import { getSmartBridgeRecommendation } from '../services/geminiService';
 import { X, Disc, Activity, Music2, GripVertical, AlertTriangle, Scissors, AudioLines, SlidersHorizontal, Sparkles, Loader2, Zap, Flame, Waves, Minus, TrendingUp, TrendingDown, Tag, Layers, Link, ArrowRightLeft, CheckCircle2, AlertOctagon, ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Target, Timer, Hourglass, Rabbit, Turtle, Wand2, Lightbulb } from 'lucide-react';
+import { GlassCard } from './GlassCard';
 
 interface SetBuilderProps {
   setTracks: Track[];
@@ -201,7 +202,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
 
         <div className="flex items-center gap-2">
             {/* Harmonic Strictness Toggle (调性严谨度切换) */}
-            <div className="flex items-center gap-2 glass-card p-1 rounded-full">
+            <GlassCard className="flex items-center gap-2 p-1 rounded-full">
                 <div className="px-2 text-xs text-slate-500 font-bold flex items-center gap-1">
                     <SlidersHorizontal className="w-3 h-3" />
                     Keys:
@@ -213,7 +214,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                             onClick={() => setStrictness(level)}
                             className={`px-3 py-1 rounded text-xs font-medium transition-all ${
                                 strictness === level 
-                                ? 'btn-candy text-slate-900 shadow-sm' 
+                                ? 'btn-primary text-slate-900 shadow-sm' 
                                 : 'text-slate-500 hover:text-slate-300'
                             }`}
                         >
@@ -221,17 +222,17 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                         </button>
                     ))}
                 </div>
-            </div>
+            </GlassCard>
         </div>
       </div>
 
       {/* --- Track List (歌曲列表) --- */}
       <div className="flex-1 overflow-y-auto pr-2 space-y-2 pb-20 custom-scrollbar">
         {setTracks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-500 glass-card border-2 border-dashed border-white/10 rounded-xl">
+          <GlassCard className="flex flex-col items-center justify-center h-64 text-slate-500 border-2 border-dashed border-white/10 rounded-xl">
             <Music2 className="w-12 h-12 mb-2 opacity-50" />
             <p>Drag tracks from library or click "+" (从曲库拖拽或点击+号)</p>
-          </div>
+          </GlassCard>
         ) : (
           setTracks.map((track, index) => {
             const prevTrack = index > 0 ? setTracks[index - 1] : null;
@@ -420,7 +421,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                 )}
                 
                 {/* Track Card (歌曲卡片) */}
-                <div className={`glass-card hover:bg-slate-800/70 transition-colors rounded-lg p-3 flex flex-col gap-2 border-l-4 shadow-sm relative cursor-grab active:cursor-grabbing mt-1
+                <GlassCard className={`hover:bg-slate-800/70 transition-colors rounded-lg p-3 flex flex-col gap-2 border-l-4 shadow-sm relative cursor-grab active:cursor-grabbing mt-1
                     ${baseBorderClass} ${issueTint} ${highlightClass}
                 `}>
                   <div className="flex items-center gap-4">
@@ -617,7 +618,7 @@ export const SetBuilder: React.FC<SetBuilderProps> = ({
                         <X className="w-4 h-4" />
                       </button>
                   </div>
-                </div>
+                </GlassCard>
                 
                 {/* Floating Badge (悬浮徽章) */}
                 {index > 0 && harmonicBadge && (

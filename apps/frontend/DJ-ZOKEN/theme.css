@@ -142,6 +142,7 @@ h1, h2, h3, .font-display {
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-strong);
   backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate)) brightness(var(--glass-brightness));
+  border-radius: var(--radius-xl);
 }
 
 .glass-card {
@@ -149,6 +150,7 @@ h1, h2, h3, .font-display {
   border: 1px solid var(--glass-border);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(var(--glass-blur-soft)) saturate(calc(var(--glass-saturate) - 0.05)) brightness(var(--glass-brightness));
+  border-radius: var(--radius-lg);
 }
 
 .glass-subtle {
@@ -156,6 +158,7 @@ h1, h2, h3, .font-display {
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow-subtle);
   backdrop-filter: blur(14px) saturate(1.1) brightness(1.02);
+  border-radius: var(--radius-md);
 }
 
 .panel-soft {
@@ -253,6 +256,15 @@ h1, h2, h3, .font-display {
 
 .btn-danger:hover {
   filter: brightness(1.06);
+}
+
+.glass-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all var(--motion-fast) var(--ease-smooth);
 }
 
 .app-topbar {

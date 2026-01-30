@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useId } from 'react';
+import { GlassCard } from './GlassCard';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Customized, usePlotArea, useXAxisDomain, useYAxisDomain } from 'recharts';
 import { Track } from '../types';
 import { ZoomIn, MoveHorizontal, RotateCcw, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
@@ -355,9 +356,9 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
   // Empty state / 空状态
   if (tracks.length === 0) {
     return (
-      <div className="h-52 flex items-center justify-center glass-card border border-dashed border-white/15 rounded-lg text-slate-500 text-xs">
+      <GlassCard className="h-52 flex items-center justify-center border border-dashed border-white/15 rounded-lg text-slate-500 text-xs">
         Add tracks to view Energy Flow (添加歌曲以查看能量流向)
-      </div>
+      </GlassCard>
     );
   }
 
@@ -367,8 +368,8 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
   const canScrollRight = isZoomed && (windowStart + windowSize) < tracks.length - 0.5;
 
   return (
-    <div 
-        className="h-52 w-full glass-card rounded-lg p-2 flex flex-col relative overflow-hidden group select-none"
+    <GlassCard 
+        className="h-52 w-full rounded-lg p-2 flex flex-col relative overflow-hidden group select-none"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -408,7 +409,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
                     </span>
                     <button 
                         onClick={(e) => { e.stopPropagation(); resetView(); }}
-                        className="text-[9px] text-slate-300 hover:text-white btn-ghost px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
+                        className="text-[9px] text-slate-300 hover:text-white btn-secondary px-1.5 py-0.5 rounded flex items-center gap-1 transition-colors"
                     >
                         <RotateCcw className="w-2.5 h-2.5" /> Reset
                     </button>
@@ -495,7 +496,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
         {canScrollLeft && (
             <button 
                 onClick={(e) => slideView('left', e)}
-                className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-r-lg btn-ghost text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
+                className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-r-lg btn-secondary text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
             >
                 <ChevronLeft className="w-4 h-4" />
             </button>
@@ -504,7 +505,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
         {canScrollRight && (
             <button 
                 onClick={(e) => slideView('right', e)}
-                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-l-lg btn-ghost text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
+                className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-auto p-1.5 rounded-l-lg btn-secondary text-slate-400 hover:text-white transition-all opacity-0 group-hover:opacity-100 z-20"
             >
                 <ChevronRight className="w-4 h-4" />
             </button>
@@ -525,7 +526,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
               />
           </div>
       )}
-    </div>
+    </GlassCard>
   );
 };
 

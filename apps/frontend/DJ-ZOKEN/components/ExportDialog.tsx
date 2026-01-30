@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { GlassCard } from './GlassCard'
+import { GlassButton } from './GlassButton'
 import { SetList, Track } from '../types'
 import {
   ExportPayload,
@@ -197,15 +199,15 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
             </label>
           </fieldset>
 
-          <div className="rounded-md glass-card p-3 text-xs text-slate-400">
+          <GlassCard className="rounded-md p-3 text-xs text-slate-400">
             {target === 'rekordbox'
               ? 'Rekordbox 将更新固定的 ZOKEN SETGPT.xml（导入一次后可刷新，曲库用于索引）'
               : '导出位置：将自动检测目标软件目录'}
-          </div>
+          </GlassCard>
 
-          <div className="rounded-md glass-card p-3 text-xs text-slate-400">
+          <GlassCard className="rounded-md p-3 text-xs text-slate-400">
             将导出 {payload.filePaths.length} 首 / 共 {activeTracks.length} 首
-          </div>
+          </GlassCard>
 
           {!hasSelectedSet && sourceType === 'saved' && (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
@@ -256,19 +258,21 @@ export const ExportDialog: React.FC<ExportDialogProps> = ({
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <button
+          <GlassButton
             onClick={onClose}
-            className="rounded-full btn-ghost px-4 py-2 text-sm"
+            variant="secondary"
+            className="rounded-full px-4 py-2 text-sm"
           >
             取消
-          </button>
-          <button
+          </GlassButton>
+          <GlassButton
             onClick={() => onConfirm(payload)}
             disabled={!canConfirm}
-            className="rounded-full btn-candy px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+            variant="primary"
+            className="rounded-full px-4 py-2 text-sm font-semibold text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {submitting ? "导出中..." : "确认导出"}
-          </button>
+          </GlassButton>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react'
+import { GlassButton } from './GlassButton'
 
 interface ResetConfirmDialogProps {
   open: boolean
@@ -21,18 +22,20 @@ export const ResetConfirmDialog: React.FC<ResetConfirmDialogProps> = ({
           重置将清空当前编排的所有曲目，此操作不可撤销。
         </p>
         <div className="mt-5 flex justify-end gap-3">
-          <button
+          <GlassButton
             onClick={onCancel}
-            className="rounded-full btn-ghost px-4 py-2 text-sm"
+            variant="secondary"
+            className="rounded-full px-4 py-2 text-sm"
           >
             取消
-          </button>
-          <button
+          </GlassButton>
+          <GlassButton
             onClick={onConfirm}
-            className="rounded-full btn-candy-danger px-4 py-2 text-sm font-semibold"
+            variant="danger"
+            className="rounded-full px-4 py-2 text-sm font-semibold"
           >
             确认重置
-          </button>
+          </GlassButton>
         </div>
       </div>
     </div>

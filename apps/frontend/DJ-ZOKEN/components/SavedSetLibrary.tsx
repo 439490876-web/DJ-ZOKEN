@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { GlassCard } from './GlassCard'
 import { Pencil, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import { SetList } from '../types'
 
@@ -24,7 +25,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
   const [open, setOpen] = useState(false)
 
   return (
-    <div className="glass-card rounded-lg p-2">
+    <GlassCard className="rounded-lg p-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-[10px] text-slate-400 uppercase tracking-wider">已保存 Set 库</div>
         <button
@@ -78,7 +79,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
                         event.stopPropagation()
                         onRenameSet(setList)
                       }}
-                      className="p-1 rounded btn-ghost text-slate-400 hover:text-white"
+                      className="p-1 rounded btn-secondary text-slate-400 hover:text-white"
                       title="重命名"
                     >
                       <Pencil className="w-3 h-3" />
@@ -89,7 +90,7 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
                         event.stopPropagation()
                         onDeleteSet(setList)
                       }}
-                      className="p-1 rounded btn-ghost text-slate-400 hover:text-rose-200"
+                      className="p-1 rounded btn-secondary text-slate-400 hover:text-rose-200"
                       title="删除"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -109,6 +110,6 @@ export const SavedSetLibrary: React.FC<SavedSetLibraryProps> = ({
           })}
         </div>
       )}
-    </div>
+    </GlassCard>
   )
 }
