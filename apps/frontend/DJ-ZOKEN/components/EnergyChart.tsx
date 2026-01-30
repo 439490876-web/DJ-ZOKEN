@@ -356,8 +356,10 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
   // Empty state / 空状态
   if (tracks.length === 0) {
     return (
-      <GlassCard className="h-52 flex items-center justify-center border border-dashed border-white/15 rounded-lg text-slate-500 text-xs">
-        Add tracks to view Energy Flow (添加歌曲以查看能量流向)
+      <GlassCard className="h-52 flex flex-col items-center justify-center macos-dropzone text-slate-400">
+        <Flame className="w-8 h-8 mb-2 opacity-50" />
+        <div className="text-sm font-semibold text-slate-200">Add tracks to view Energy Flow</div>
+        <div className="text-xs text-slate-400">添加歌曲以查看能量流向</div>
       </GlassCard>
     );
   }
