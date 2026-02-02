@@ -2824,9 +2824,8 @@ const App: React.FC = () => {
                     )}
                  </div>
             </div>
+        </div>
         </Panel>
-
-      </div>
 
       {editTrackId && (
         <div
