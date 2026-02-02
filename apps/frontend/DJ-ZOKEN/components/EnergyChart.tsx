@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useId } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Customized, usePlotArea, useXAxisDomain, useYAxisDomain } from 'recharts';
 import { Track } from '../types';
 import { ZoomIn, MoveHorizontal, RotateCcw, ChevronLeft, ChevronRight, Flame } from 'lucide-react';
+import { Card, EmptyState } from './ui';
 
 interface EnergyChartProps {
   tracks: Track[];
@@ -355,9 +356,10 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
   // Empty state / 空状态
   if (tracks.length === 0) {
     return (
-      <div className="h-52 flex items-center justify-center glass-card border border-dashed border-white/15 rounded-lg text-slate-500 text-xs">
-        Add tracks to view Energy Flow (添加歌曲以查看能量流向)
-      </div>
+      <EmptyState
+        className="h-52 text-slate-500 text-xs"
+        description="Add tracks to view Energy Flow (添加歌曲以查看能量流向)"
+      />
     );
   }
 
@@ -367,8 +369,8 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
   const canScrollRight = isZoomed && (windowStart + windowSize) < tracks.length - 0.5;
 
   return (
-    <div 
-        className="h-52 w-full glass-card rounded-lg p-2 flex flex-col relative overflow-hidden group select-none"
+    <Card 
+        className="h-52 w-full rounded-lg p-2 flex flex-col relative overflow-hidden group select-none"
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -525,7 +527,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ tracks }) => {
               />
           </div>
       )}
-    </div>
+    </Card>
   );
 };
 
