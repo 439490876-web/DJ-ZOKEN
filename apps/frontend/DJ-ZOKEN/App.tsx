@@ -18,6 +18,7 @@ import { SetBuilder } from './components/SetBuilder';
 import { ExportDialog } from './components/ExportDialog';
 import { ResetConfirmDialog } from './components/ResetConfirmDialog';
 import { SavedSetLibrary } from './components/SavedSetLibrary';
+import { Badge, Button, Card, Input, Panel, SegmentedTabs } from './components/ui';
 import { Search, Library, Plus, Save, RotateCcw, Sunrise, Sun, Sunset, ArrowUp, ArrowDown, Zap, Flame, Activity, Music, X, Tag, Disc, Sparkles, Bot, Loader2, PieChart, Target, Filter, AlertTriangle, CheckCircle2, BarChart3, ScanEye, Pencil, FolderPlus, Folder, Trash2, ListOrdered, ArrowUpRight } from 'lucide-react';
 
 type SortKey = 'bpm' | 'key' | 'energy' | 'resonance' | 'import';
@@ -1965,8 +1966,8 @@ const App: React.FC = () => {
     <div className="h-screen w-full bg-transparent flex text-slate-200 overflow-hidden font-sans app-shell">
       
       {/* 左侧: 曲库面板 */}
-      <div className="w-1/3 min-w-[350px] max-w-md flex flex-col glass-panel panel-soft">
-        <div className="p-4 glass-card z-10 flex flex-col gap-3">
+      <Panel variant="soft" className="w-1/3 min-w-[350px] max-w-md flex flex-col">
+        <Card className="p-4 z-10 flex flex-col gap-3">
           <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-dj-accent shadow-[0_0_12px_rgba(180,138,166,0.7)]"></div>
             SPIN<span className="text-dj-accent">FLOW</span>
@@ -1974,22 +1975,21 @@ const App: React.FC = () => {
           
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-4 h-4 text-slate-500" />
-            <input 
+            <Input
               type="text"
               placeholder="搜索曲库..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full glass-input text-sm pl-10 pr-4 py-2 focus:outline-none focus:ring-1 focus:ring-dj-accent/40 transition-all placeholder-slate-500"
+              className="pl-10 pr-4 py-2 text-sm placeholder-slate-500"
             />
           </div>
 
           {/* 专注模式开关 */}
-          <button
+          <Button
             onClick={() => setIsFocusMode(!isFocusMode)}
-            className={`w-full py-2 px-3 rounded-full flex items-center justify-between text-xs font-bold transition-all ${
-                isFocusMode 
-                ? 'btn-candy text-slate-900'
-                : 'glass-pill hover:text-white'
+            variant={isFocusMode ? 'primary' : 'ghost'}
+            className={`w-full justify-between rounded-full text-xs font-bold ${
+              isFocusMode ? 'text-slate-900' : 'hover:text-white'
             }`}
           >
              <div className="flex items-center gap-2">
@@ -1997,46 +1997,46 @@ const App: React.FC = () => {
                  <span>专注选曲 (Smart Focus)</span>
              </div>
              {isFocusMode && (
-                 <span className="bg-dj-accent text-slate-900 px-1.5 py-0.5 rounded text-[10px]">ON</span>
+                 <Badge className="bg-dj-accent text-slate-900">ON</Badge>
              )}
-          </button>
+          </Button>
           
           {isFocusMode && (
-              <div className="glass-card rounded px-2 py-1.5 flex items-center gap-2 text-[10px] text-slate-400 animate-in fade-in slide-in-from-top-1">
+              <Card className="rounded-xl px-2 py-1.5 flex items-center gap-2 text-[10px] text-slate-400 animate-in fade-in slide-in-from-top-1">
                   <Filter className="w-3 h-3 text-slate-500" />
                   {focusModeDescription}
-              </div>
+              </Card>
           )}
 
           {/* 风格过滤器 */}
           <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
-            <button 
-                onClick={() => setSelectedCategory(null)}
-                className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                    selectedCategory === null 
-                    ? 'btn-candy text-slate-900 shadow-md' 
-                    : 'glass-pill hover:text-white'
-                }`}
+            <Button
+              size="sm"
+              variant={selectedCategory === null ? 'primary' : 'ghost'}
+              onClick={() => setSelectedCategory(null)}
+              className={`rounded-full text-xs font-bold whitespace-nowrap ${
+                selectedCategory === null ? 'text-slate-900 shadow-md' : 'hover:text-white'
+              }`}
             >
-                全部
-            </button>
+              全部
+            </Button>
             {allCategories.map(cat => (
-                <button 
-                    key={cat}
-                    onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                        selectedCategory === cat 
-                        ? 'btn-candy text-slate-900 shadow-md' 
-                        : 'glass-pill hover:text-white'
-                    }`}
-                >
-                    {cat}
-                </button>
+              <Button
+                key={cat}
+                size="sm"
+                variant={selectedCategory === cat ? 'primary' : 'ghost'}
+                onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                className={`rounded-full text-xs font-medium whitespace-nowrap ${
+                  selectedCategory === cat ? 'text-slate-900 shadow-md' : 'hover:text-white'
+                }`}
+              >
+                {cat}
+              </Button>
             ))}
           </div>
 
           {/* 文件夹管理 */}
-          <div className="rounded-lg glass-card overflow-hidden">
+          <Card className="rounded-2xl overflow-hidden">
             <div className="px-3 py-2 flex items-center justify-between text-[11px] text-slate-400">
               <span className="flex items-center gap-2 font-semibold text-slate-300">
                 <Folder className="w-3.5 h-3.5" /> 曲库文件夹
@@ -2118,28 +2118,30 @@ const App: React.FC = () => {
             </div>
 
             <div className="p-3 flex gap-2">
-              <input
+              <Input
                 type="text"
                 value={newFolderName}
                 onChange={(e) => setNewFolderName(e.target.value)}
                 placeholder="新建文件夹"
-                className="flex-1 glass-input rounded px-2 py-1 text-xs placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-dj-accent/40"
+                className="flex-1 rounded-xl px-2 py-1 text-xs placeholder-slate-500"
               />
-              <button
+              <Button
                 onClick={handleCreateFolder}
-                className="px-2 py-1 rounded-full btn-ghost text-xs flex items-center gap-1"
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-xs flex items-center gap-1"
               >
                 <FolderPlus className="w-3 h-3" /> 新建
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
 
           {/* 排序控制 */}
           <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between text-xs text-slate-500">
                   <div className="flex items-center gap-2">
                       <span className="font-medium">排序模式:</span>
-                      <div className="flex bg-slate-800 rounded p-0.5 border border-slate-700">
+                      <SegmentedTabs className="bg-slate-800/60 border border-white/10">
                           <button 
                             onClick={() => sortMode !== 'single' && toggleSortMode()}
                             className={`px-2 py-0.5 rounded text-[10px] transition-all ${sortMode === 'single' ? 'bg-slate-600 text-white shadow-sm' : 'hover:text-slate-300'}`}
@@ -2152,7 +2154,7 @@ const App: React.FC = () => {
                           >
                               多项
                           </button>
-                      </div>
+                      </SegmentedTabs>
                   </div>
                   
                   {sortCriteria.length > 0 && (
@@ -2175,12 +2177,14 @@ const App: React.FC = () => {
                       const activeSort = isActive ? sortCriteria[activeIndex] : null;
 
                       return (
-                          <button
+                          <Button
                             key={opt.id}
+                            size="sm"
+                            variant="ghost"
                             onClick={() => handleSort(opt.id as SortKey)}
-                            className={`px-2 py-1.5 rounded flex items-center gap-1.5 transition-all text-xs border border-transparent ${
-                                isActive 
-                                ? 'bg-slate-700 text-white border-slate-600 shadow-sm' 
+                            className={`rounded-lg text-xs border border-transparent ${
+                              isActive
+                                ? 'bg-slate-700 text-white border-slate-600 shadow-sm'
                                 : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                             }`}
                           >
@@ -2197,7 +2201,7 @@ const App: React.FC = () => {
                                       {activeSort.order === 'asc' ? <ArrowUp className="w-2.5 h-2.5" /> : <ArrowDown className="w-2.5 h-2.5" />}
                                   </span>
                               )}
-                          </button>
+                          </Button>
                       );
                   })}
               </div>
@@ -2207,7 +2211,7 @@ const App: React.FC = () => {
                   </div>
               )}
           </div>
-        </div>
+        </Card>
 
         {/* 曲库列表渲染 */}
         <div
@@ -2235,12 +2239,14 @@ const App: React.FC = () => {
             }`}>
                 <div className="font-bold">拖拽本地歌曲到这里</div>
                 <div className="mt-1">或</div>
-                <button
+                <Button
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-1 inline-flex items-center justify-center px-3 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
+                    variant="ghost"
+                    size="sm"
+                    className="mt-1 rounded-xl text-xs text-slate-300 hover:text-white"
                 >
                     点击选择文件
-                </button>
+                </Button>
                 <div className="text-[10px] text-slate-600 mt-1">仅本地导入，不会上传</div>
                 <label className="mt-2 inline-flex items-center gap-2 text-[10px] text-slate-400 cursor-pointer select-none">
                     <input
@@ -2481,7 +2487,7 @@ const App: React.FC = () => {
                 )
             })}
         </div>
-      </div>
+      </Panel>
 
       {/* 中间: Set 编排区 */}
       <div className="flex-1 flex flex-col bg-transparent relative">
